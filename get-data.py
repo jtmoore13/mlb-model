@@ -1,138 +1,307 @@
 
-from sportsipy.mlb.teams import Team, Teams
+from sportsipy.mlb.schedule import Game
+from sportsipy.mlb.boxscore import Boxscore, BoxscorePlayer
+from sportsipy.mlb.roster import Player
 import pandas as pd
-import sys
-import calendar
+from bs4 import BeautifulSoup
+import requests
+import datetime
+import math
+import re
+import json
+from pprint import pprint
+
+import utils
+
+GAME_DATA = 'data/game-data.json'
+PITCHING_DATA = 'data/pitching-data.json'
 
 
-class format:
-   PURPLE = '\033[95m'
-   CYAN = '\033[96m'
-   DARKCYAN = '\033[36m'
-   BLUE = '\033[94m'
-   GREEN = '\033[92m'
-   YELLOW = '\033[93m'
-   RED = '\033[91m'
-   BOLD = '\033[1m'
-   UNDERLINE = '\033[4m'
-   END = '\033[0m'
-   CHECK = u'\u2713'
-
-
-TEAMS = ['ARI', 'ATL', 'BAL', 'BOS', 'CHC', 'CHW', 'CIN', 'CLE', 'COL', 'DET', 'FLA', 'HOU', 'KCR', 'LAA', 'LAD', 'MIL', 'MIN', 'NYM', 'NYY', 'OAK', 'PHI', 'PIT', 'SDP', 'SEA', 'SFG', 'STL', 'TBR', 'TEX', 'TOR', 'WSN']
-MONTHS = {month:str(list(calendar.month_name).index(month)) for month in list(calendar.month_name) if month != ''}
-YEARS = [year for year in range(2021, 2022)]
-STAT_CATEGORIES = ['runs', 'at_bats', 'hits', 'home_runs', 'slugging_percentage', '*time_of_day']
-
-
-def get_abbreviation(loc, box_score):
+def remove_headers(soup):
     """
-    Return the abbreviaton for either the away or home team (specified by loc)
-    from a given box score.
+    Removes the repetitive stat headers that occur throughout the season table
     """
-    winner = box_score.winning_name
-    home_name = box_score._home_name.text()
-    away_name = box_score._away_name.text()
-    if (loc == 'home' and home_name == winner) or (loc == 'away' and away_name == winner):
-        return box_score.winning_abbr
-    return box_score.losing_abbr
+    headers = soup.find_all('tr', class_='thead')
+    for header in headers:
+        header.extract()
 
 
-def format_date(date):
+def add_game_id(box_score, game_id):
     """
-    Formats a date from 'Saturday, May 8, 2021' to '2021-05-08'
+    Adds the game id used for the box score uri. 
+    Normal game = 0, first game of DH = 1, second game of DH = 2
     """
-    vals = date.split(',')
-    month, day = vals[1].strip().split()
-    month = MONTHS[month]
-    if len(month) == 1:
-        month = '0' + month
-    if len(day) == 1:
-        day = '0' + day
-    year = vals[2].strip()
-    return f'{year}-{month}-{day}'
+    box_score['game_id'] = game_id
 
 
-def add_game_stats(all_games, team_abbr, game):
-    box_score = game.boxscore
-    df = box_score.dataframe
-    home_abbr = get_abbreviation('home', box_score)
-    if team_abbr == home_abbr:
-        loc  = 'home'
+def add_location(row):
+    """
+    Adds the location (home or away) to the row of other game stats.
+    """
+    if row[2] == '@':
+        row[2] = int(False)
     else:
-        loc = 'away'
-
-    stats = {}
-    for stat in STAT_CATEGORIES:
-        key = f'{loc}_{stat}'
-        if stat[0] == '*':
-            key = stat[1:]
-        stats[key] = df.iloc[0][key]
-    date = format_date(box_score.date)
-
-    if team_abbr not in all_games:
-        all_games[team_abbr] = {}
-    all_games[team_abbr][date] = stats
+        row.insert(2, int(True))
 
 
-def should_skip(game):
+def add_date(row, year):
     """
-    Return true if the given game was the second game of a doubleheader,
-    or if the game was less than 9 innings.
+    Adds the date to the row of other game stats. Combines the first two values in 'row'.
+    row: ['Apr', '1', ...] ---> ['2021-04-01', ...]
     """
-    return game.game_number_for_day == 2 or game.innings < 9
+    date = str(datetime.date(year, utils.MONTHS[row[0]], int(row[1])))
+    row[0] = date
+    row.pop(1)
 
 
-def game_added(is_dh):
+def add_yesterday_off(box_score, season_games, team_abbr):
     """
-    Prints '.' after a game has been added to the dictionary.
-    Prints a ' ' for the second game of a doubleheader, which 
-    isn't included as a datapoint.
+    Adds whether or not the specified team had an off day.
     """
-    if is_dh:
-        sys.stdout.write('.')
-    else:
-        sys.stdout.write(' ')
-    sys.stdout.flush()
+    y_m_d = box_score['date'].split('-')
+    date = datetime.date(int(y_m_d[0]), int(y_m_d[1]), int(y_m_d[2]))
+    day_before = utils.get_day_before(date)
+    box_score['yesterday_off'] = int(team_abbr not in season_games or day_before not in season_games[team_abbr])
 
 
-def collect_data():
+def add_opp_starter(box_score):
     """
-    Collects box score data from every game and returns a DataFrame containing
-    all of the relevant statistics
+    Add the opponent starter and his throwing hand.
+    """
+    starter = box_score['opp_starter']
+    box_score['opp_starter'] = starter[:starter.find('(')]
+    hand = box_score['opp_starter_righty']
+    box_score['opp_starter_righty'] = float(hand == 'R')
 
-    all_games[team][date] = stats_dict
+
+def convert_to_floats(box_score):
     """
-    all_games = {}
-    for year in YEARS:
+    Convert stat types from string to float.
+    {'RBI': '7'} ---> {'RBI': 7.0}
+    """
+    for category in box_score:
+        try:
+            box_score[category] = float(box_score[category])
+        except:
+            pass
+
+
+def add_is_night_game(season_games, team_abbr, date, is_night):
+    """
+    Adds whether or not the game is at night for both teams for a given game. 
+    """
+    opp_abbr = season_games[team_abbr][date]['opp']
+    season_games[team_abbr][date]['night'] = is_night
+    season_games[opp_abbr][date]['night'] = is_night
+
+
+def should_skip(row):
+    """
+    Return true if the game is either the second of a doubleheader,
+    or the game was suspended. Only including the first game of 
+    a doublheader for simplicity.
+    """
+    return '(2)' in row[:5] or 'susp' in row[:5]
+
+
+def get_night_game(game_page):
+    """
+    Returns true if the game took place at night (7:00 pm local start)
+    """
+    return float(game_page.find(text=re.compile('Night Game')) != None)
+
+
+def get_temperature(game_page):
+    """
+    Parse for and return the game time temperature.
+    """
+    weather = game_page.find('', text=re.compile('&deg'))
+    degrees = weather.find('&deg')
+    temp = int(weather[degrees-3:degrees].strip())
+    return temp
+
+
+def is_pitching_row(line):
+    """
+    Return true if the line of the html contains text that indicates it is
+    a row containing pitching game stats.
+    """
+    return 'data-stat="IP"' in line and 'data-append-csv' in line
+
+
+def dump_data(file, dict):
+    """
+    Dump the dictionary of games into a json file.
+    """
+    with open(file, 'w') as f:
+        f.seek(0)
+        json.dump(dict, f, indent=4)
+
+
+def scrape_hitting_data(team_abbr, year):
+    """
+    Adds a team's desired boxscore values for each game in the specified season.
+    Adds the desired stats from each row listed here: 
+    https://www.baseball-reference.com/teams/tgl.cgi?team=BOS&t=b&year=2021'
+    """
+    season_page = requests.get(f'https://www.baseball-reference.com/teams/tgl.cgi?team={team_abbr}&t=b&year={year}').text
+    soup = BeautifulSoup(season_page, 'lxml')
+    remove_headers(soup)
+    table = soup.find(id='team_batting_gamelogs').select('tbody')
+    season = table[0].get_text(separator=' ').split('\n')
+    season = [row.split()[2:] for row in season if len(row) > 1]
+
+    # dict to fill with stats
+    season_games = {}
+    for game in season:
+        if should_skip(game):
+            utils.print_game(False)
+            continue
+        if '(1)' in game[:4]:
+            game.pop(game.index('(1)'))
+        
+        add_location(game)
+        add_date(game, year)
+        box_score = {utils.HITTING_STATS[i]:game[i] for i in range(len(utils.HITTING_STATS)) if utils.HITTING_STATS[i] in utils.STATS_TO_USE}
+        add_yesterday_off(box_score, season_games, team_abbr)
+        add_opp_starter(box_score)
+        convert_to_floats(box_score)
+
+        date = box_score['date']
+        season_games[date] = box_score
+        utils.print_game(True)
+
+    return season_games
+
+
+def parse_pitching_stats(line):
+    """
+    Parse the boxscore page for pitcher stats. Return a map of each 
+    pitcher's stats for that game.
+    """
+    csv = line.find('data-append-csv="')+17
+    shtml = line.find('.shtml')
+    player_id = line[csv : line.find('"', csv)].strip()
+    player_name = line[line.find('>', shtml)+1:line.find('<', shtml)].strip()
+    game_stats = {
+        'name': player_name,
+        'id': player_id, 
+    }
+    for stat in utils.PITCHING_STATS:
+        i = line.find(f'data-stat="{stat}"')
+        num = float(line[line.find('>', i)+1:line.find('<', i)].strip())
+        game_stats[stat] = num
+
+    return game_stats
+
+
+def add_pitcher_stats(stats, date, pitcher_data):
+    """
+    Adds a pitcher's game stats to the dictionary containing all of the pitcher
+    data. pitcher_data dict in the form of:
+
+    pitcher_data['verlaju01'] = {'2015-05-13': {stats}, '2015-05-18': {stats}}
+    """
+    player_id = stats['id']
+    if player_id not in pitcher_data:
+        pitcher_data[player_id] = {}
+    pitcher_data[player_id][date] = {}
+    for cat in utils.PITCHING_STATS:
+        pitcher_data[player_id][date][cat] = stats[cat]
+
+
+def scrape_pitching_data(year, season_games):
+    """
+    Scrape all of the desired pitching data from the given year and load
+    a dictionary containing all of the stats into a json file.
+    """
+    schedule_page = requests.get(f'https://www.baseball-reference.com/leagues/majors/{year}-schedule.shtml').text
+    soup = BeautifulSoup(schedule_page, 'lxml')
+    schedule = soup.find_all('p', class_='game')
+
+    pitcher_data = {}
+    for i in range(len(schedule)):
+        game = schedule[i]
+        game_id = game.select('a')[2].get('href')
+        game_page = requests.get('https://www.baseball-reference.com/' + game_id).text
+        soup = BeautifulSoup(game_page, 'lxml')
+
+        if utils.is_playoffs(soup.title.text):
+            break
+
+        date, home_abbr, away_abbr = utils.parse_title(soup.title.text)
+        for line in game_page.split('\n'):
+            if not is_pitching_row(line):
+                continue
+            stats = parse_pitching_stats(line)
+            add_pitcher_stats(stats, date, pitcher_data)
+
+        scorebox = soup.find('div', class_='box').find('div', class_='scorebox').find('div', class_='scorebox_meta').text
+        is_second_game = 'Second game of doublheader' in scorebox
+        if is_second_game:
+            continue
+
+        night_game = get_night_game(soup)
+        temp = get_temperature(soup)
+        season_games[home_abbr][date]['night_game'] = night_game
+        season_games[away_abbr][date]['night_game'] = night_game
+        season_games[home_abbr][date]['temp'] = temp
+        season_games[away_abbr][date]['temp'] = temp
+        print(f'Game {i+1}:', date, f'- {home_abbr} @ {away_abbr}', utils.format.GREEN+utils.format.CHECK+utils.format.END)
+        
+    dump_data(PITCHING_DATA, pitcher_data)
+
+        
+def collect_pitching_data():
+    """
+    Collect pitching data from every game in the year range. 
+    """
+    print(utils.format.BOLD+f'\nCollecting pitching data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n'+utils.format.END)
+    with open(GAME_DATA, 'r') as f:
+        all_games = json.load(f)
+
+    for year in utils.YEARS:
         print('==========', year, '==========')
-        for team_code in TEAMS[:2]:
-            print(team_code, end='')
-            team = Team(team_name=team_code, year=year)
-            for game in team.schedule[:5]:
-                if should_skip(game):
-                    game_added(False)
-                    continue
-                add_game_stats(all_games, team.abbreviation, game)
-                game_added(True)
-            print(format.GREEN+format.CHECK+format.END)
+        scrape_pitching_data(year, all_games[str(year)])
 
-    df = pd.DataFrame(all_games)
-    df.index.name = 'Date'
-    df = df.sort_index()
-    return df
+    dump_data(GAME_DATA, all_games)
 
 
-## --------------------- ##
+def collect_hitting_data():
+    """
+    Collects offensive box score data from every game, stores it in a dictionary, and writes
+    it to a json file. 
+
+    Format of dict is: all_games['2021']['ATL']['2021-07-09'] = {box_score_stats}
+    """
+    print(utils.format.BOLD+f'\nCollecting hitting data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n'+utils.format.END)
+
+    all_games = {}
+    for year in utils.YEARS:
+        print('==========', year, '==========')
+        teams = utils.get_team_abbreviations(year)
+        for team_abbr in teams:
+            utils.print_team(team_abbr)
+            season_games = scrape_hitting_data(team_abbr, year)
+            if year not in all_games:
+                all_games[year] = {}
+            all_games[year][team_abbr] = season_games
+            utils.print_check()
+
+    dump_data(GAME_DATA, all_games)
 
 
 def main():
-    print(format.BOLD+'\nCollecting game data...\n'+format.END)
-    df = collect_data()
-    df.to_csv('./data.csv', na_rep=' --- ')
+    # 1) Collect hitting data
+    collect_hitting_data()
+    
+    # 2) Collect pitching data
+    collect_pitching_data()
+
+    # 3) Calculate per-game/recent/season statisitcs 
+
+
 
 
 if __name__ == '__main__':
     main()
-
-
