@@ -4,7 +4,7 @@ import sys
 import datetime
 
 
-YEARS = [year for year in range(2010, 2022) if year != 2020]
+YEARS = [year for year in range(2021, 2022) if year != 2020]
 HITTING_STATS = ['date', 'home', 'opp', 'result', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'IBB', 'SO', 'HBP', 'SH', 'SF', 'ROE', 'GDP', 'SB', 'CS', 'current_BA', 'current_OBP', 'current_SLG', 'current_OPS', 'LOB', '#', 'opp_starter_righty', 'opp_starter']
 STATS_TO_USE = ['2B', '3B', 'AB', 'current_BA', 'BB', 'H', 'HBP', 'HR', 'current_OBP', 'current_OPS', 'PA', 'R', 'RBI', 'SF', 'current_SLG', 'SO', 'date', 'home', 'opp', 'opp_starter', 'opp_starter_righty']
 PITCHING_STATS = ['IP', 'ER', 'H', 'BB']  #  'R', 'SO', 'HR', 'earned_run_avg'
@@ -103,15 +103,40 @@ class format:
    DEGREES = u'\xb0'
 
 
-def is_playoffs(title):
+def is_playoffs(soup):
     """
     Returns true if the game is playoff game.
     """
+    title = soup.title.text
     playoffs = ['ALWC', 'NLWC', 'ALDS', 'NLDS', 'ALCS', 'NLCS', 'World Series']
     for series in playoffs:
         if series in title:
             return True
     return False
+
+
+def is_pitching_row(line):
+    """
+    Return true if the line of the html contains text that indicates it is
+    a row containing pitching game stats.
+    """
+    return ('data-stat="IP"' in line and 'data-append-csv' in line) or ('Team Totals' in line and 'data-stat="ER"' in line)
+
+
+def was_suspended(soup):
+    """
+    Returns true if the game was suspended.
+    """
+    scorebox = soup.find('div', class_='scorebox_meta').text
+    return 'suspended' in scorebox
+
+
+def is_second_game(soup):
+    """
+    Returns true if the game is the second of a doubleheader.
+    """
+    scorebox = soup.find('div', class_='box').find('div', class_='scorebox').find('div', class_='scorebox_meta').text
+    return 'Second game of doubleheader' in scorebox
 
 
 def parse_title(title):
@@ -126,9 +151,9 @@ def parse_title(title):
     date = str(datetime.date(year, month, day))
 
     teams = vals[0][:vals[0].find('Box Score')]
-    home_name = teams.split(' at ')[0].strip()
-    away_name = teams.split(' at ')[1].strip()
-    return date, TEAM_ABBRS[home_name], TEAM_ABBRS[away_name]
+    away_name = teams.split(' at ')[0].strip()
+    home_name = teams.split(' at ')[1].strip()
+    return date, TEAM_ABBRS[away_name], TEAM_ABBRS[home_name]
 
 
 def get_day_before(date):

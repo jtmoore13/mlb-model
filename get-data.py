@@ -6,7 +6,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import requests
 import datetime
-import math
+from unidecode import unidecode
 import re
 import json
 from pprint import pprint
@@ -16,6 +16,7 @@ import utils
 GAME_DATA = 'data/game-data.json'
 PITCHING_DATA = 'data/pitching-data.json'
 
+session = requests.Session()
 
 def remove_headers(soup):
     """
@@ -121,12 +122,12 @@ def get_temperature(game_page):
     return temp
 
 
-def is_pitching_row(line):
+def away_table_finished(line):
     """
-    Return true if the line of the html contains text that indicates it is
-    a row containing pitching game stats.
+    Return true if keywords that indicate the end of a pitching table
+    has been reached are found.
     """
-    return 'data-stat="IP"' in line and 'data-append-csv' in line
+    return 'Team Totals' in line and 'data-stat="ER"' in line
 
 
 def dump_data(file, dict):
@@ -135,16 +136,17 @@ def dump_data(file, dict):
     """
     with open(file, 'w') as f:
         f.seek(0)
+        f.truncate(0)
         json.dump(dict, f, indent=4)
 
 
-def scrape_hitting_data(team_abbr, year):
+def scrape_offensive_data(team_abbr, year):
     """
     Adds a team's desired boxscore values for each game in the specified season.
     Adds the desired stats from each row listed here: 
     https://www.baseball-reference.com/teams/tgl.cgi?team=BOS&t=b&year=2021'
     """
-    season_page = requests.get(f'https://www.baseball-reference.com/teams/tgl.cgi?team={team_abbr}&t=b&year={year}').text
+    season_page = session.get(f'https://www.baseball-reference.com/teams/tgl.cgi?team={team_abbr}&t=b&year={year}').text
     soup = BeautifulSoup(season_page, 'lxml')
     remove_headers(soup)
     table = soup.find(id='team_batting_gamelogs').select('tbody')
@@ -174,7 +176,7 @@ def scrape_hitting_data(team_abbr, year):
     return season_games
 
 
-def parse_pitching_stats(line):
+def parse_pitcher_stats(line):
     """
     Parse the boxscore page for pitcher stats. Return a map of each 
     pitcher's stats for that game.
@@ -195,51 +197,77 @@ def parse_pitching_stats(line):
     return game_stats
 
 
-def add_pitcher_stats(stats, date, pitcher_data):
+def add_pitcher_stats(stats, opp, date, pitcher_data, season_games):
     """
     Adds a pitcher's game stats to the dictionary containing all of the pitcher
     data. pitcher_data dict in the form of:
 
     pitcher_data['verlaju01'] = {'2015-05-13': {stats}, '2015-05-18': {stats}}
+
+    Also adds the starter's player_id to dictionary of season games, under the 
+    appropriate game for the starter's opponent.
     """
     player_id = stats['id']
     if player_id not in pitcher_data:
         pitcher_data[player_id] = {}
-    pitcher_data[player_id][date] = {}
+
+    pitcher_data[player_id][date] = {'opp': opp}
     for cat in utils.PITCHING_STATS:
         pitcher_data[player_id][date][cat] = stats[cat]
+
+    if 'opp_starter_id' not in season_games[opp][date]:
+        season_games[opp][date]['opp_starter_id'] = stats['id']
+
+
+def get_starters(soup):
+    """
+    Returns a len-2 list containing each starter's name and id.
+
+    [('Lucas Giolito', 'giolilu01'), ('Dylan Bundy', 'bundydy01')]
+    """
+    lineups = str(soup.find('div', id='all_lineups')).split('\n')
+    starters = []
+    for i in range(len(lineups)):
+        if '<td>P</td>' in lineups[i]:
+            line = lineups[i-1].strip()
+            shtml = line.find('.shtml')
+            name = line[shtml+8:line.find('<', shtml)]
+            last_initial = name.split()[1][0].lower()
+            id = line[line.find(f'players/{last_initial}/')+10:shtml]
+            starters.append((name, id))
+            if len(starters) == 2:
+                break
+    return starters[0], starters[1]
 
 
 def scrape_pitching_data(year, season_games):
     """
     Scrape all of the desired pitching data from the given year and load
-    a dictionary containing all of the stats into a json file.
+    a dictionary containing all of the stats into a json file. Also add some 
+    information about the game like temperature and time.
     """
-    schedule_page = requests.get(f'https://www.baseball-reference.com/leagues/majors/{year}-schedule.shtml').text
+    schedule_page = session.get(f'https://www.baseball-reference.com/leagues/majors/{year}-schedule.shtml').text
     soup = BeautifulSoup(schedule_page, 'lxml')
     schedule = soup.find_all('p', class_='game')
-
+    
     pitcher_data = {}
-    for i in range(len(schedule)):
-        game = schedule[i]
+    for game in schedule:
         game_id = game.select('a')[2].get('href')
-        game_page = requests.get('https://www.baseball-reference.com/' + game_id).text
+        game_page = session.get('https://www.baseball-reference.com/' + game_id).text
         soup = BeautifulSoup(game_page, 'lxml')
-
-        if utils.is_playoffs(soup.title.text):
+    
+        if utils.is_playoffs(soup):
             break
-
-        date, home_abbr, away_abbr = utils.parse_title(soup.title.text)
-        for line in game_page.split('\n'):
-            if not is_pitching_row(line):
-                continue
-            stats = parse_pitching_stats(line)
-            add_pitcher_stats(stats, date, pitcher_data)
-
-        scorebox = soup.find('div', class_='box').find('div', class_='scorebox').find('div', class_='scorebox_meta').text
-        is_second_game = 'Second game of doublheader' in scorebox
-        if is_second_game:
+        if utils.is_second_game(soup) or utils.was_suspended(soup):
+            print('skipping')
             continue
+        
+        away_starter, home_starter = get_starters(soup)
+        date, away_abbr, home_abbr = utils.parse_title(soup.title.text)
+        season_games[away_abbr][date]['opp_starter_name'] = home_starter[0]
+        season_games[away_abbr][date]['opp_starter_id'] = home_starter[1]
+        season_games[home_abbr][date]['opp_starter_name'] = away_starter[0]
+        season_games[home_abbr][date]['opp_starter_id'] = away_starter[1]
 
         night_game = get_night_game(soup)
         temp = get_temperature(soup)
@@ -247,8 +275,22 @@ def scrape_pitching_data(year, season_games):
         season_games[away_abbr][date]['night_game'] = night_game
         season_games[home_abbr][date]['temp'] = temp
         season_games[away_abbr][date]['temp'] = temp
-        print(f'Game {i+1}:', date, f'- {home_abbr} @ {away_abbr}', utils.format.GREEN+utils.format.CHECK+utils.format.END)
-        
+
+        opp = home_abbr
+        for line in game_page.split('\n'):
+            if not utils.is_pitching_row(line):
+                continue
+            # finished with the away pitching table, now onto the home table
+            if away_table_finished(line):
+                opp = away_abbr
+                continue
+            stats = parse_pitcher_stats(line)
+            add_pitcher_stats(stats, opp, date, pitcher_data, season_games)
+            if away_table_finished(line) and opp == away_abbr:
+                break
+            
+        print(date, f'- {away_abbr} @ {home_abbr}', utils.format.GREEN+utils.format.CHECK+utils.format.END)
+
     dump_data(PITCHING_DATA, pitcher_data)
 
         
@@ -256,10 +298,10 @@ def collect_pitching_data():
     """
     Collect pitching data from every game in the year range. 
     """
-    print(utils.format.BOLD+f'\nCollecting pitching data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n'+utils.format.END)
+    print(utils.format.BOLD+utils.format.BLUE+f'\nCollecting pitching data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n'+utils.format.END)
     with open(GAME_DATA, 'r') as f:
         all_games = json.load(f)
-
+        
     for year in utils.YEARS:
         print('==========', year, '==========')
         scrape_pitching_data(year, all_games[str(year)])
@@ -267,14 +309,14 @@ def collect_pitching_data():
     dump_data(GAME_DATA, all_games)
 
 
-def collect_hitting_data():
+def collect_offensive_data():
     """
     Collects offensive box score data from every game, stores it in a dictionary, and writes
     it to a json file. 
 
     Format of dict is: all_games['2021']['ATL']['2021-07-09'] = {box_score_stats}
     """
-    print(utils.format.BOLD+f'\nCollecting hitting data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n'+utils.format.END)
+    print(utils.format.BOLD+utils.format.BLUE+f'\nCollecting hitting data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n'+utils.format.END)
 
     all_games = {}
     for year in utils.YEARS:
@@ -282,7 +324,7 @@ def collect_hitting_data():
         teams = utils.get_team_abbreviations(year)
         for team_abbr in teams:
             utils.print_team(team_abbr)
-            season_games = scrape_hitting_data(team_abbr, year)
+            season_games = scrape_offensive_data(team_abbr, year)
             if year not in all_games:
                 all_games[year] = {}
             all_games[year][team_abbr] = season_games
@@ -292,14 +334,13 @@ def collect_hitting_data():
 
 
 def main():
-    # 1) Collect hitting data
-    collect_hitting_data()
+    # 1) Collect offensive data
+    collect_offensive_data()
     
     # 2) Collect pitching data
     collect_pitching_data()
 
     # 3) Calculate per-game/recent/season statisitcs 
-
 
 
 
