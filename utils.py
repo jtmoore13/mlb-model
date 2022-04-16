@@ -1,25 +1,26 @@
 
-from sportsipy.mlb.teams import Team, Teams
+from sportsipy.mlb.teams import Teams
 import sys
 import datetime
+import json
+import re
 
-
-YEARS = [year for year in range(2021, 2022) if year != 2020]
-HITTING_STATS = ['date', 'home', 'opp', 'result', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'IBB', 'SO', 'HBP', 'SH', 'SF', 'ROE', 'GDP', 'SB', 'CS', 'current_BA', 'current_OBP', 'current_SLG', 'current_OPS', 'LOB', '#', 'opp_starter_righty', 'opp_starter']
-STATS_TO_USE = ['2B', '3B', 'AB', 'current_BA', 'BB', 'H', 'HBP', 'HR', 'current_OBP', 'current_OPS', 'PA', 'R', 'RBI', 'SF', 'current_SLG', 'SO', 'date', 'home', 'opp', 'opp_starter', 'opp_starter_righty']
+YEARS = [str(year) for year in range(2021, 2022) if year != 2020]
 PITCHING_STATS = ['IP', 'ER', 'H', 'BB']  #  'R', 'SO', 'HR', 'earned_run_avg'
-
-MONTHS = {
-    'Mar': 3, 
-    'Apr': 4, 
-    'May': 5, 
-    'Jun': 6, 
-    'Jul': 7, 
-    'Aug': 8, 
-    'Sep': 9, 
-    'Oct': 10, 
-    'Nov': 11,
+HITTING_STATS = ['date', 'home', 'opp', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'HBP', 'SF', 'postgame_BA', 'postgame_OBP', 'postgame_SLG', 'postgame_OPS', 'opp_starter_righty', 'opp_starter']
+STAT_CHANGES = {
+    'date': 'date_game',
+    'home': 'team_homeORaway',
+    'opp': 'opp_ID',
+    'opp_starter': 'opposing_starter',
+    'opp_starter_righty': 'opposing_starter_throws',
+    'postgame_BA': 'batting_avg',
+    'postgame_OBP': 'onbase_perc',
+    'postgame_OPS': 'onbase_plus_slugging',
+    'postgame_SLG': 'slugging_perc'
 }
+
+REGEX = re.compile('/players/./')
 
 TEAM_NAMES = {
     'ARI': 'Arizona Diamondbacks',
@@ -87,6 +88,17 @@ TEAM_ABBRS = {
     'Washington Nationals': 'WSN'
 }
 
+MONTHS = {
+    'Mar': 3, 
+    'Apr': 4, 
+    'May': 5, 
+    'Jun': 6, 
+    'Jul': 7, 
+    'Aug': 8, 
+    'Sep': 9, 
+    'Oct': 10, 
+    'Nov': 11,
+}
 
 class format:
    PURPLE = '\033[95m'
@@ -101,6 +113,69 @@ class format:
    END = '\033[0m'
    CHECK = u'\u2713'
    DEGREES = u'\xb0'
+
+
+def load_data(year, file):
+    """
+    Return a dict from a json file.
+    """
+    with open(f'data/{year}/{file}', 'r') as f:
+        return json.load(f)
+
+
+def dump_data(year, file, dict):
+    """
+    Dump the dictionary of games into a json file.
+    """
+    with open(f'data/{year}/{file}', 'w') as f:
+        f.seek(0)
+        f.truncate(0)
+        json.dump(dict, f, indent=4)
+
+
+def get_starting_pitchers(soup):
+    """
+    Returns a len-2 list containing each starter's name and id.
+
+    [('Lucas Giolito', 'giolilu01'), ('Dylan Bundy', 'bundydy01')]
+    """
+    lineups = str(soup.find('div', id='all_lineups')).split('\n')
+    starters = []
+    for i in range(len(lineups)):
+        if '<td>P</td>' in lineups[i]:
+            line = lineups[i-1].strip()
+            shtml = line.find('.shtml')
+            name = line[shtml+8:line.find('<', shtml)]
+            id = line[re.search(REGEX, line).span()[1]:shtml]
+            starters.append((name, id))
+            if len(starters) == 2:
+                break
+    return starters[0], starters[1]
+
+
+def has_team_totals(line):
+    """
+    Return true if keywords that indicate the end of a pitching table
+    has been reached are found.
+    """
+    return 'Team Totals' in line and 'data-stat="ER"' in line
+
+
+def get_night_game(game_page):
+    """
+    Returns true if the game took place at night (7:00 pm local start)
+    """
+    return float(game_page.find(text=re.compile('Night Game')) != None)
+
+
+def get_temperature(game_page):
+    """
+    Parse for and return the game time temperature.
+    """
+    weather = game_page.find('', text=re.compile('&deg'))
+    degrees = weather.find('&deg')
+    temp = int(weather[degrees-3:degrees].strip())
+    return temp
 
 
 def is_playoffs(soup):
@@ -131,6 +206,35 @@ def was_suspended(soup):
     return 'suspended' in scorebox
 
 
+def get_stat_value(row, stat):
+    """
+    Return the value of a particular stat from a game log row.
+    """
+    if stat in STAT_CHANGES:
+        stat = STAT_CHANGES[stat]
+
+    if stat == 'opposing_starter':
+        name = row.find('td', {'data-stat': stat}).text.strip()
+        return name[:name.find('(')]
+    elif stat == 'opposing_starter_throws':
+        return int(row.find('td', {'data-stat': stat}).text.strip() == 'R')
+    elif stat == 'team_homeORaway':
+        return int(row.find('td', {'data-stat': stat}).text.strip() == '@')
+    elif stat == 'date_game':
+        return row.find_all('td')[1]['csk'].split('.')[0]
+    elif stat == 'opp_ID':
+        return row.find('td', {'data-stat': stat}).text
+    else:
+        return float(row.find('td', {'data-stat': stat}).text)
+
+
+def game_suspended(game):
+    """
+    Return true if the game was suspended. Used for hitting game logs.
+    """
+    return 'suspended' in str(game)
+
+
 def is_second_game(soup):
     """
     Returns true if the game is the second of a doubleheader.
@@ -154,6 +258,65 @@ def parse_title(title):
     away_name = teams.split(' at ')[0].strip()
     home_name = teams.split(' at ')[1].strip()
     return date, TEAM_ABBRS[away_name], TEAM_ABBRS[home_name]
+    
+
+def to_total_outs(ip):
+    """
+    Convert innings pitched into total outs.
+    5.1 --> 16
+    """
+    ip = str(ip).split('.')
+    return float(ip[0])*3 + float(ip[-1])
+
+
+def to_IP(total_outs):
+    """
+    Convert total outs to innings pitched.
+    16 --> 5.33
+    """
+    return total_outs/3
+
+
+def calculate_ERA(earned_runs, innings_pitched):
+    """
+    Return earned-run-average from earned runs and innings pitched
+    """
+    return round(earned_runs*9/innings_pitched, 2)
+
+
+def calculate_WHIP(innings_pitched, walks, hits):
+    """
+    Return WHIP.
+    """
+    return round((walks+hits)/innings_pitched, 2)
+
+
+def calculate_BA(at_bats, hits):
+    """
+    Return batting average.
+    """
+    return round(hits/at_bats, 3)
+
+
+def calculate_OBP(hits, walks, hbp, at_bats, sac_fly):
+    """
+    Return on-base percentage.
+    """
+    return round((hits+walks+hbp)/(at_bats+sac_fly+hbp+walks), 3)
+
+
+def calculate_SLG(singles, doubles, triples, homeruns, at_bats):
+    """
+    Return slugging percentage.
+    """
+    return round((singles+2*doubles+3*triples+4*homeruns)/at_bats, 3)
+
+
+def calculate_OPS(obp, slg):
+    """
+    Return on-base plus slugging percentage.
+    """
+    return round(obp + slg, 3)
 
 
 def get_day_before(date):
@@ -170,16 +333,13 @@ def get_team_abbreviations(year):
     return sorted([team.abbreviation for team in Teams(year)])
 
 
-def print_game(should_print):
+def print_game(char):
     """
-    Prints '.' is should_print is true, ' ' otherwise.
+    Print the given character ('.' for a game, ' ' for no game)
     """
-    if should_print:
-        sys.stdout.write('.')
-    else:
-        sys.stdout.write(' ')
+    sys.stdout.write(char)
     sys.stdout.flush()
-    
+
 
 def print_team(team_abbr):
     """

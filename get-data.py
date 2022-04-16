@@ -1,22 +1,29 @@
 
-from sportsipy.mlb.schedule import Game
-from sportsipy.mlb.boxscore import Boxscore, BoxscorePlayer
-from sportsipy.mlb.roster import Player
-import pandas as pd
+
 from bs4 import BeautifulSoup
 import requests
 import datetime
-from unidecode import unidecode
-import re
-import json
+import sys, os, time
 from pprint import pprint
 
 import utils
 
-GAME_DATA = 'data/game-data.json'
-PITCHING_DATA = 'data/pitching-data.json'
+GAME_DATA = 'game-data.json'
+PITCHING_DATA = 'pitching-data.json'
+SESSION = requests.Session()
 
-session = requests.Session()
+RECENT_N = 10
+
+
+def make_folders():
+    """
+    Creates folders for each year of data.
+    """
+    for year in utils.YEARS:
+        if os.path.isdir(f'data/{year}'):
+            continue
+        os.mkdir(f'data/{year}')
+
 
 def remove_headers(soup):
     """
@@ -25,34 +32,6 @@ def remove_headers(soup):
     headers = soup.find_all('tr', class_='thead')
     for header in headers:
         header.extract()
-
-
-def add_game_id(box_score, game_id):
-    """
-    Adds the game id used for the box score uri. 
-    Normal game = 0, first game of DH = 1, second game of DH = 2
-    """
-    box_score['game_id'] = game_id
-
-
-def add_location(row):
-    """
-    Adds the location (home or away) to the row of other game stats.
-    """
-    if row[2] == '@':
-        row[2] = int(False)
-    else:
-        row.insert(2, int(True))
-
-
-def add_date(row, year):
-    """
-    Adds the date to the row of other game stats. Combines the first two values in 'row'.
-    row: ['Apr', '1', ...] ---> ['2021-04-01', ...]
-    """
-    date = str(datetime.date(year, utils.MONTHS[row[0]], int(row[1])))
-    row[0] = date
-    row.pop(1)
 
 
 def add_yesterday_off(box_score, season_games, team_abbr):
@@ -65,28 +44,6 @@ def add_yesterday_off(box_score, season_games, team_abbr):
     box_score['yesterday_off'] = int(team_abbr not in season_games or day_before not in season_games[team_abbr])
 
 
-def add_opp_starter(box_score):
-    """
-    Add the opponent starter and his throwing hand.
-    """
-    starter = box_score['opp_starter']
-    box_score['opp_starter'] = starter[:starter.find('(')]
-    hand = box_score['opp_starter_righty']
-    box_score['opp_starter_righty'] = float(hand == 'R')
-
-
-def convert_to_floats(box_score):
-    """
-    Convert stat types from string to float.
-    {'RBI': '7'} ---> {'RBI': 7.0}
-    """
-    for category in box_score:
-        try:
-            box_score[category] = float(box_score[category])
-        except:
-            pass
-
-
 def add_is_night_game(season_games, team_abbr, date, is_night):
     """
     Adds whether or not the game is at night for both teams for a given game. 
@@ -96,94 +53,14 @@ def add_is_night_game(season_games, team_abbr, date, is_night):
     season_games[opp_abbr][date]['night'] = is_night
 
 
-def should_skip(row):
-    """
-    Return true if the game is either the second of a doubleheader,
-    or the game was suspended. Only including the first game of 
-    a doublheader for simplicity.
-    """
-    return '(2)' in row[:5] or 'susp' in row[:5]
-
-
-def get_night_game(game_page):
-    """
-    Returns true if the game took place at night (7:00 pm local start)
-    """
-    return float(game_page.find(text=re.compile('Night Game')) != None)
-
-
-def get_temperature(game_page):
-    """
-    Parse for and return the game time temperature.
-    """
-    weather = game_page.find('', text=re.compile('&deg'))
-    degrees = weather.find('&deg')
-    temp = int(weather[degrees-3:degrees].strip())
-    return temp
-
-
-def away_table_finished(line):
-    """
-    Return true if keywords that indicate the end of a pitching table
-    has been reached are found.
-    """
-    return 'Team Totals' in line and 'data-stat="ER"' in line
-
-
-def dump_data(file, dict):
-    """
-    Dump the dictionary of games into a json file.
-    """
-    with open(file, 'w') as f:
-        f.seek(0)
-        f.truncate(0)
-        json.dump(dict, f, indent=4)
-
-
-def scrape_offensive_data(team_abbr, year):
-    """
-    Adds a team's desired boxscore values for each game in the specified season.
-    Adds the desired stats from each row listed here: 
-    https://www.baseball-reference.com/teams/tgl.cgi?team=BOS&t=b&year=2021'
-    """
-    season_page = session.get(f'https://www.baseball-reference.com/teams/tgl.cgi?team={team_abbr}&t=b&year={year}').text
-    soup = BeautifulSoup(season_page, 'lxml')
-    remove_headers(soup)
-    table = soup.find(id='team_batting_gamelogs').select('tbody')
-    season = table[0].get_text(separator=' ').split('\n')
-    season = [row.split()[2:] for row in season if len(row) > 1]
-
-    # dict to fill with stats
-    season_games = {}
-    for game in season:
-        if should_skip(game):
-            utils.print_game(False)
-            continue
-        if '(1)' in game[:4]:
-            game.pop(game.index('(1)'))
-        
-        add_location(game)
-        add_date(game, year)
-        box_score = {utils.HITTING_STATS[i]:game[i] for i in range(len(utils.HITTING_STATS)) if utils.HITTING_STATS[i] in utils.STATS_TO_USE}
-        add_yesterday_off(box_score, season_games, team_abbr)
-        add_opp_starter(box_score)
-        convert_to_floats(box_score)
-
-        date = box_score['date']
-        season_games[date] = box_score
-        utils.print_game(True)
-
-    return season_games
-
-
 def parse_pitcher_stats(line):
     """
-    Parse the boxscore page for pitcher stats. Return a map of each 
+    Parse a line in the boxscore page for pitcher stats. Return a map of each 
     pitcher's stats for that game.
     """
     csv = line.find('data-append-csv="')+17
-    shtml = line.find('.shtml')
     player_id = line[csv : line.find('"', csv)].strip()
+    shtml = line.find('.shtml')
     player_name = line[line.find('>', shtml)+1:line.find('<', shtml)].strip()
     game_stats = {
         'name': player_name,
@@ -197,7 +74,83 @@ def parse_pitcher_stats(line):
     return game_stats
 
 
-def add_pitcher_stats(stats, opp, date, pitcher_data, season_games):
+def calculate_bullpen_stats(year, team_abbr):
+    """
+    Calculate ERA and WHIP for a team's bullpen prior to the start of each game
+    and return a map containing the information. 
+
+    team_bullpen['2021-07-19']['pregame_ERA'] = 4.87
+    """
+    game_page = SESSION.get(f'https://www.baseball-reference.com/teams/tgl.cgi?team={team_abbr}&t=p&year={year}').text
+    soup = BeautifulSoup(game_page, 'lxml')
+    remove_headers(soup)
+    table = soup.find('div', id='div_team_pitching_gamelogs').find_all('tr')[1:]
+
+    season_games = utils.load_data(year, GAME_DATA)
+    all_pitching = utils.load_data(year, PITCHING_DATA)
+
+    season_ER, season_BB, season_H, season_outs = (0, 0, 0, 0)
+    team_bullpen = {}
+    for game in table:
+        if utils.game_suspended(game):
+            continue
+        date = utils.get_stat_value(game, 'date_game')
+        if date in team_bullpen:
+            date += ' (2)'
+        opp_abbr = utils.get_stat_value(game, 'opp_ID')
+
+        # game was suspended but baseball-reference accidentally doesn't have it marked 
+        if date not in season_games[opp_abbr] or date not in season_games[team_abbr]:
+            continue
+
+        team_bullpen[date] = {}
+        if season_outs > 0:
+            team_bullpen[date]['pen_pregame_ERA'] = utils.calculate_ERA(season_ER, utils.to_IP(season_outs))
+            team_bullpen[date]['pen_pregame_WHIP'] = utils.calculate_WHIP(utils.to_IP(season_outs), season_BB, season_H)
+
+        starter_id = season_games[opp_abbr][date]['opp_starter_id']
+        starter_stats = all_pitching['player_stats'][starter_id][date]
+
+        # subtract the starter's stats from the game total stats
+        season_H += utils.get_stat_value(game, 'H') - starter_stats['H']
+        season_outs += utils.to_total_outs(utils.get_stat_value(game, 'IP')) - utils.to_total_outs(starter_stats['IP'])
+        season_BB += utils.get_stat_value(game, 'BB') - starter_stats['BB']
+        season_ER += utils.get_stat_value(game, 'ER') - starter_stats['ER']
+
+    return team_bullpen
+
+
+def calculate_pitching_stats(year):
+    """
+    Calculates WHIP and ERA for each starter as the season goes on, as well
+    as WHIP and ERA for each team's bullpen.
+    """
+    print(f'Calculating {utils.format.BOLD+utils.format.BLUE}[pitching] {utils.format.END}stats for {year}... ', end='')
+    sys.stdout.flush()
+
+    all_pitching = utils.load_data(year, PITCHING_DATA)
+
+    for pitcher in all_pitching['player_stats']:
+        season_IP, season_ER, season_BB, season_H = 0, 0, 0, 0
+        appearences = all_pitching['player_stats'][pitcher]
+        for date in appearences:
+            game = appearences[date]
+            if season_IP > 0:
+                game['pregame_ERA'] = utils.calculate_ERA(season_ER, utils.to_IP(season_IP))
+                game['pregame_WHIP'] = utils.calculate_WHIP(season_IP, season_BB, season_H)
+            season_ER += game['ER']
+            season_BB += game['BB']
+            season_H += game['H']
+            season_IP += utils.to_total_outs(game['IP'])
+    
+    # calculate bullpen WHIP and ERA
+    for team in utils.get_team_abbreviations(year):
+        all_pitching['team_bullpen_stats'][team] = calculate_bullpen_stats(year, team)
+
+    utils.print_check()
+
+
+def add_pitcher_stats(stats, team, opp, date, season_pitching, season_games):
     """
     Adds a pitcher's game stats to the dictionary containing all of the pitcher
     data. pitcher_data dict in the form of:
@@ -208,140 +161,320 @@ def add_pitcher_stats(stats, opp, date, pitcher_data, season_games):
     appropriate game for the starter's opponent.
     """
     player_id = stats['id']
-    if player_id not in pitcher_data:
-        pitcher_data[player_id] = {}
+    if player_id not in season_pitching:
+        season_pitching[player_id] = {}
 
-    pitcher_data[player_id][date] = {'opp': opp}
-    for cat in utils.PITCHING_STATS:
-        pitcher_data[player_id][date][cat] = stats[cat]
+    season_pitching[player_id][date] = {
+        'team': team,
+         'opp': opp
+    }
+    for category in utils.PITCHING_STATS:
+        season_pitching[player_id][date][category] = stats[category]
 
-    if 'opp_starter_id' not in season_games[opp][date]:
-        season_games[opp][date]['opp_starter_id'] = stats['id']
-
-
-def get_starters(soup):
-    """
-    Returns a len-2 list containing each starter's name and id.
-
-    [('Lucas Giolito', 'giolilu01'), ('Dylan Bundy', 'bundydy01')]
-    """
-    lineups = str(soup.find('div', id='all_lineups')).split('\n')
-    starters = []
-    for i in range(len(lineups)):
-        if '<td>P</td>' in lineups[i]:
-            line = lineups[i-1].strip()
-            shtml = line.find('.shtml')
-            name = line[shtml+8:line.find('<', shtml)]
-            last_initial = name.split()[1][0].lower()
-            id = line[line.find(f'players/{last_initial}/')+10:shtml]
-            starters.append((name, id))
-            if len(starters) == 2:
-                break
-    return starters[0], starters[1]
+    game = season_games[opp][date]
+    if 'opp_starter_id' not in game:
+        game['opp_starter_id'] = player_id
+    if 'opp_pitchers' not in game:
+        game['opp_pitchers'] = []
+    game['opp_pitchers'].append(player_id)
 
 
-def scrape_pitching_data(year, season_games):
+def get_season_pitching(year, season_games):
     """
     Scrape all of the desired pitching data from the given year and load
     a dictionary containing all of the stats into a json file. Also add some 
     information about the game like temperature and time.
     """
-    schedule_page = session.get(f'https://www.baseball-reference.com/leagues/majors/{year}-schedule.shtml').text
+    schedule_page = SESSION.get(f'https://www.baseball-reference.com/leagues/majors/{year}-schedule.shtml').text
     soup = BeautifulSoup(schedule_page, 'lxml')
     schedule = soup.find_all('p', class_='game')
     
-    pitcher_data = {}
+    season_pitching = {}
     for game in schedule:
         game_id = game.select('a')[2].get('href')
-        game_page = session.get('https://www.baseball-reference.com/' + game_id).text
+        game_page = SESSION.get('https://www.baseball-reference.com/' + game_id).text
         soup = BeautifulSoup(game_page, 'lxml')
     
         if utils.is_playoffs(soup):
             break
-        if utils.is_second_game(soup) or utils.was_suspended(soup):
-            print('skipping')
+        if utils.was_suspended(soup):
             continue
-        
-        away_starter, home_starter = get_starters(soup)
+  
+        away_starter, home_starter = utils.get_starting_pitchers(soup)
         date, away_abbr, home_abbr = utils.parse_title(soup.title.text)
+        if utils.is_second_game(soup):
+            date += ' (2)'
         season_games[away_abbr][date]['opp_starter_name'] = home_starter[0]
         season_games[away_abbr][date]['opp_starter_id'] = home_starter[1]
         season_games[home_abbr][date]['opp_starter_name'] = away_starter[0]
         season_games[home_abbr][date]['opp_starter_id'] = away_starter[1]
 
-        night_game = get_night_game(soup)
-        temp = get_temperature(soup)
+        night_game = utils.get_night_game(soup)
+        temp = utils.get_temperature(soup)
         season_games[home_abbr][date]['night_game'] = night_game
         season_games[away_abbr][date]['night_game'] = night_game
         season_games[home_abbr][date]['temp'] = temp
         season_games[away_abbr][date]['temp'] = temp
 
+        team = away_abbr
         opp = home_abbr
+        team_totals = 0
         for line in game_page.split('\n'):
+            if team_totals == 2:
+                break
             if not utils.is_pitching_row(line):
                 continue
-            # finished with the away pitching table, now onto the home table
-            if away_table_finished(line):
+            if utils.has_team_totals(line):
+                team = home_abbr
                 opp = away_abbr
+                team_totals += 1
                 continue
             stats = parse_pitcher_stats(line)
-            add_pitcher_stats(stats, opp, date, pitcher_data, season_games)
-            if away_table_finished(line) and opp == away_abbr:
-                break
-            
+            add_pitcher_stats(stats, team, opp, date, season_pitching, season_games)
+
         print(date, f'- {away_abbr} @ {home_abbr}', utils.format.GREEN+utils.format.CHECK+utils.format.END)
 
-    dump_data(PITCHING_DATA, pitcher_data)
+    return season_pitching
 
-        
-def collect_pitching_data():
+
+def get_pitching_data():
     """
     Collect pitching data from every game in the year range. 
     """
-    print(utils.format.BOLD+utils.format.BLUE+f'\nCollecting pitching data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n'+utils.format.END)
-    with open(GAME_DATA, 'r') as f:
-        all_games = json.load(f)
-        
+    print(f'\nScraping{utils.format.BOLD+utils.format.BLUE} [pitching]{utils.format.END} data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n')
+    
+    all_pitching = {
+        'player_stats': {},
+        'team_bullpen_stats': {}
+    }
     for year in utils.YEARS:
         print('==========', year, '==========')
-        scrape_pitching_data(year, all_games[str(year)])
+        season_games = utils.load_data(year, GAME_DATA)
+        all_pitching['player_stats'] = get_season_pitching(year, season_games)
+        utils.dump_data(year, PITCHING_DATA, all_pitching)
+        utils.dump_data(year, GAME_DATA, season_games)
+        calculate_pitching_stats(year)
+        utils.dump_data(year, PITCHING_DATA, all_pitching)
 
-    dump_data(GAME_DATA, all_games)
+
+def calculate_offensive_stats(season_games):
+    """
+    Calculates offensive statistics (BA, SLG, OBP, OPS) for a team's:
+    - last n-games
+    - season home/away splits
+    - season splits for when a RHP starts vs when a LHP starts
+    and and adds the statistics to the json map of game data.
+    """
+    print(f'Calculating stats {utils.format.BOLD+utils.format.YELLOW}[hitting]{utils.format.END}... ', end='')
+    sys.stdout.flush()
+
+    for team in season_games:
+        # initialize stats for a team's season splits - home/away, games against RHP starters vs LHP starters
+        home_H, home_AB, home_BB, home_SF, home_HBP, home_1B, home_2B, home_3B, home_HR = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+        away_H, away_AB, away_BB, away_SF, away_HBP, away_1B, away_2B, away_3B, away_HR = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+        left_H, left_AB, left_BB, left_SF, left_HBP, left_1B, left_2B, left_3B, left_HR = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+        right_H, right_AB, right_BB, right_SF, right_HBP, right_1B, right_2B, right_3B, right_HR = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+        dates = list(season_games[team])
+        first_game = season_games[team][dates[0]]
+        if first_game['home']:
+            home_H = first_game['H']
+            home_AB = first_game['AB']
+            home_BB = first_game['BB']
+            home_SF = first_game['SF']
+            home_HBP = first_game['HBP']
+            home_1B = first_game['H']-(first_game['2B']+first_game['3B']+first_game['HR'])
+            home_2B = first_game['2B']
+            home_3B = first_game['3B']
+            home_HR = first_game['HR']
+        else:
+            away_H = first_game['H']
+            away_AB = first_game['AB']
+            away_BB = first_game['BB']
+            away_SF = first_game['SF']
+            away_HBP = first_game['HBP']
+            away_1B = first_game['H']-(first_game['2B']+first_game['3B']+first_game['HR'])
+            away_2B = first_game['2B']
+            away_3B = first_game['3B']
+            away_HR = first_game['HR']
+
+        if first_game['opp_starter_righty']:
+            right_H = first_game['H']
+            right_AB = first_game['AB']
+            right_BB = first_game['BB']
+            right_SF = first_game['SF']
+            right_HBP = first_game['HBP']
+            right_1B = first_game['H']-(first_game['2B']+first_game['3B']+first_game['HR'])
+            right_2B = first_game['2B']
+            right_3B = first_game['3B']
+            right_HR = first_game['HR']
+        else:
+            left_H = first_game['H']
+            left_AB = first_game['AB']
+            left_BB = first_game['BB']
+            left_SF = first_game['SF']
+            left_HBP = first_game['HBP']
+            left_1B = first_game['H']-(first_game['2B']+first_game['3B']+first_game['HR'])
+            left_2B = first_game['2B']
+            left_3B = first_game['3B']
+            left_HR = first_game['HR']
+
+        # loop through all of the games, starting with the second game
+        for i in range(1, len(dates)):
+            date = dates[i]
+            game = season_games[team][date]
+
+            prev_game = season_games[team][dates[i-1]]
+            game['pregame_BA'] = prev_game['postgame_BA']
+            game['pregame_OBP'] = prev_game['postgame_OBP']
+            game['pregame_SLG'] = prev_game['postgame_SLG']
+            game['pregame_OPS'] = prev_game['postgame_OPS']
+
+            if home_AB > 0:
+                game['home_BA'] = utils.calculate_BA(home_AB, home_H)
+                game['home_OBP'] = utils.calculate_OBP(home_H, home_BB, home_HBP, home_AB, home_SF)
+                game['home_SLG'] = utils.calculate_SLG(home_1B, home_2B, home_3B, home_HR, home_AB)
+                game['home_OPS'] = utils.calculate_OPS(game['home_OBP'], game['home_SLG'])
+            if away_AB > 0:
+                game['away_BA'] = utils.calculate_BA(away_AB, away_H)
+                game['away_OBP'] = utils.calculate_OBP(away_H, away_BB, away_HBP, away_AB, away_SF)
+                game['away_SLG'] = utils.calculate_SLG(away_1B, away_2B, away_3B, away_HR, away_AB)
+                game['away_OPS'] = utils.calculate_OPS(game['away_OBP'], game['away_SLG'])
+            if right_AB > 0:
+                game['right_BA'] = utils.calculate_BA(right_AB, right_H)
+                game['right_OBP'] = utils.calculate_OBP(right_H, right_BB, right_HBP, right_AB, right_SF)
+                game['right_SLG'] = utils.calculate_SLG(right_1B, right_2B, right_3B, right_HR, right_AB)
+                game['right_OPS'] = utils.calculate_OPS(game['right_OBP'], game['right_SLG'])
+            if left_AB > 0:
+                game['left_BA'] = utils.calculate_BA(left_AB, left_H)
+                game['left_OBP'] = utils.calculate_OBP(left_H, left_BB, left_HBP, left_AB, left_SF)
+                game['left_SLG'] = utils.calculate_SLG(left_1B, left_2B, left_3B, left_HR, left_AB)
+                game['left_OPS'] = utils.calculate_OPS(game['left_OBP'], game['left_SLG'])
+
+            if game['home']:
+                home_H += game['H']
+                home_AB += game['AB']
+                home_BB += game['BB']
+                home_SF += game['SF']
+                home_HBP += game['HBP']
+                home_1B += game['H']-(game['2B']+game['3B']+game['HR'])
+                home_2B += game['2B']
+                home_3B += game['3B']
+                home_HR += game['HR']
+            else:              
+                away_H += game['H']
+                away_AB += game['AB']
+                away_BB += game['BB']
+                away_SF += game['SF']
+                away_HBP += game['HBP']
+                away_1B += game['H']-(game['2B']+game['3B']+game['HR'])
+                away_2B += game['2B']
+                away_3B += game['3B']
+                away_HR += game['HR']
+            if game['opp_starter_righty']:
+                right_H += game['H']
+                right_AB += game['AB']
+                right_BB += game['BB']
+                right_SF += game['SF']
+                right_HBP += game['HBP']
+                right_1B += game['H']-(game['2B']+game['3B']+game['HR'])
+                right_2B += game['2B']
+                right_3B += game['3B']
+                right_HR += game['HR']
+            else:
+                left_H += game['H']
+                left_AB += game['AB']
+                left_BB += game['BB']
+                left_SF += game['SF']
+                left_HBP += game['HBP']
+                left_1B += game['H']-(game['2B']+game['3B']+game['HR'])
+                left_2B += game['2B']
+                left_3B += game['3B']
+                left_HR += game['HR']
+
+            # collect stats from last n games
+            recent_H, recent_AB, recent_BB, recent_SF, recent_HBP, recent_1B, recent_2B, recent_3B, recent_HR = 0, 0, 0, 0, 0, 0, 0, 0, 0
+            for j in range(1, RECENT_N+1):
+                if i-j < 0:
+                    break
+                prev_date = dates[i-j]
+                prev_game = season_games[team][prev_date]
+                recent_H += prev_game['H']
+                recent_AB += prev_game['AB']
+                recent_BB += prev_game['BB']
+                recent_SF += prev_game['SF']
+                recent_HBP += prev_game['HBP']
+                recent_1B += prev_game['H']-(prev_game['2B']+prev_game['3B']+prev_game['HR'])
+                recent_2B += prev_game['2B']
+                recent_3B += prev_game['3B']
+                recent_HR += prev_game['HR']
+
+            game[f'{RECENT_N}-day_BA'] = utils.calculate_BA(recent_AB, recent_H)
+            game[f'{RECENT_N}-day_OBP'] = utils.calculate_OBP(recent_H, recent_BB, recent_HBP, recent_AB, recent_SF)
+            game[f'{RECENT_N}-day_SLG'] = utils.calculate_SLG(recent_1B, recent_2B, recent_3B, recent_HR, recent_AB)
+            game[f'{RECENT_N}-day-OPS'] = utils.calculate_OPS(game[f'{RECENT_N}-day_OBP'], game[f'{RECENT_N}-day_SLG'])
+
+    utils.print_check()
 
 
-def collect_offensive_data():
+def get_offensive_season(team_abbr, year):
+    """
+    Adds a team's desired boxscore values for each game in the specified season.
+    Adds the desired stats from each row listed here: 
+    https://www.baseball-reference.com/teams/tgl.cgi?team=BOS&t=b&year=2021'
+    """
+    utils.print_team(team_abbr)
+    season_page = SESSION.get(f'https://www.baseball-reference.com/teams/tgl.cgi?team={team_abbr}&t=b&year={year}').text
+    soup = BeautifulSoup(season_page, 'lxml')
+    remove_headers(soup)
+    table = soup.find(id='team_batting_gamelogs').find_all('tr')[1:]
+
+    season_games = {}
+    count = 0
+    for row in table:
+        if utils.game_suspended(row):
+            continue
+        box_score = {}
+        for stat in utils.HITTING_STATS:
+            box_score[stat] = utils.get_stat_value(row, stat)
+        add_yesterday_off(box_score, season_games, team_abbr)
+        date = box_score['date']
+        if date in season_games:
+            date += ' (2)'
+        season_games[date] = box_score
+        count += 1
+
+    print(f' ({count} games) ', end='')
+    utils.print_check()
+    return season_games
+
+
+def get_offensive_data():
     """
     Collects offensive box score data from every game, stores it in a dictionary, and writes
     it to a json file. 
 
-    Format of dict is: all_games['2021']['ATL']['2021-07-09'] = {box_score_stats}
+    Format of dict is: season_games['ATL']['2021-07-09'] = {map of box score stats}
     """
-    print(utils.format.BOLD+utils.format.BLUE+f'\nCollecting hitting data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n'+utils.format.END)
+    print(f'\nScraping{utils.format.BOLD+utils.format.YELLOW} [hitting]{utils.format.END} data from {utils.YEARS[0]}-{utils.YEARS[-1]}...\n')
 
-    all_games = {}
     for year in utils.YEARS:
         print('==========', year, '==========')
         teams = utils.get_team_abbreviations(year)
+        season_games = {}
         for team_abbr in teams:
-            utils.print_team(team_abbr)
-            season_games = scrape_offensive_data(team_abbr, year)
-            if year not in all_games:
-                all_games[year] = {}
-            all_games[year][team_abbr] = season_games
-            utils.print_check()
-
-    dump_data(GAME_DATA, all_games)
+            season_games[team_abbr] = get_offensive_season(team_abbr, year)
+        utils.dump_data(year, GAME_DATA, season_games)
+        calculate_offensive_stats(season_games)
+        utils.dump_data(year, GAME_DATA, season_games)
 
 
 def main():
-    # 1) Collect offensive data
-    collect_offensive_data()
-    
-    # 2) Collect pitching data
-    collect_pitching_data()
-
-    # 3) Calculate per-game/recent/season statisitcs 
-
+    """
+    """
+    # make_folders()
+    # get_offensive_data()
+    # get_pitching_data()
 
 
 if __name__ == '__main__':
