@@ -260,7 +260,7 @@ def parse_title(title):
     return date, TEAM_ABBRS[away_name], TEAM_ABBRS[home_name]
     
 
-def to_total_outs(ip):
+def IP_to_outs(ip):
     """
     Convert innings pitched into total outs.
     5.1 --> 16
@@ -269,12 +269,12 @@ def to_total_outs(ip):
     return float(ip[0])*3 + float(ip[-1])
 
 
-def to_IP(total_outs):
+def outs_to_IP(total_outs):
     """
     Convert total outs to innings pitched.
     16 --> 5.33
     """
-    return total_outs/3
+    return round(total_outs/3, 3)
 
 
 def calculate_ERA(earned_runs, innings_pitched):
