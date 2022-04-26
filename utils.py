@@ -4,10 +4,9 @@ import sys
 import datetime
 import json
 import re
+import math
 
-YEARS = [str(year) for year in range(2021, 2022) if year != 2020]
-PITCHING_STATS = ['IP', 'ER', 'H', 'BB']  #  'R', 'SO', 'HR', 'earned_run_avg'
-HITTING_STATS = ['date', 'home', 'opp', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'HBP', 'SF', 'postgame_BA', 'postgame_OBP', 'postgame_SLG', 'postgame_OPS', 'opp_starter_righty', 'opp_starter']
+
 STAT_CHANGES = {
     'date': 'date_game',
     'home': 'team_homeORaway',
@@ -64,6 +63,7 @@ TEAM_ABBRS = {
     'Chicago White Sox': 'CHW',
     'Cincinnati Reds': 'CIN',
     'Cleveland Indians': 'CLE',
+    'Cleveland Guardians': 'CLE',
     'Colorado Rockies': 'COL',
     'Detroit Tigers': 'DET',
     'Houston Astros': 'HOU',
@@ -123,6 +123,13 @@ def load_data(year, file):
         return json.load(f)
 
 
+def is_future_game(game_id):
+    """
+    Return true if the game has not happened yet.
+    """
+    return 'previews' in game_id
+
+
 def dump_data(year, file, dict):
     """
     Dump the dictionary of games into a json file.
@@ -150,6 +157,8 @@ def get_starting_pitchers(soup):
             starters.append((name, id))
             if len(starters) == 2:
                 break
+    if len(starters) < 2:
+        return ('not_found', 'not_found')
     return starters[0], starters[1]
 
 
@@ -225,7 +234,11 @@ def get_stat_value(row, stat):
     elif stat == 'opp_ID':
         return row.find('td', {'data-stat': stat}).text
     else:
-        return float(row.find('td', {'data-stat': stat}).text)
+        try:
+            return int(row.find('td', {'data-stat': stat}).text)
+        except:
+            return float(row.find('td', {'data-stat': stat}).text)
+
 
 
 def game_suspended(game):
@@ -260,35 +273,42 @@ def parse_title(title):
     return date, TEAM_ABBRS[away_name], TEAM_ABBRS[home_name]
     
 
-def IP_to_outs(ip):
+def add_IP(one, two):
     """
-    Convert innings pitched into total outs.
-    5.1 --> 16
+    Add or subtract innings pitched. 
+    5.1 + 8.2 = 14.0 IP
+    4.1 - 1.2 = 2.2 IP
     """
-    ip = str(ip).split('.')
-    return float(ip[0])*3 + float(ip[-1])
+    sum = round(one + two, 2)
+    tenth = int(str(sum).split('.')[-1])
+    if 2 < tenth < 8:
+        sum = float(math.ceil(sum) + (tenth % 3)/10)
+    if tenth == 8 or tenth == 9:
+        sum = float(math.floor(sum) + (3-(10-tenth))/10)
+    return sum
 
 
-def outs_to_IP(total_outs):
+def to_decimal(innings_pitched):
     """
-    Convert total outs to innings pitched.
-    16 --> 5.33
+    Convert conventional IP format to standard decimals.
+    5.1 --> 5.33
     """
-    return round(total_outs/3, 3)
+    tenth = float(str(float(innings_pitched)).split('.')[-1])
+    return math.floor(innings_pitched) + tenth/3
 
 
 def calculate_ERA(earned_runs, innings_pitched):
     """
-    Return earned-run-average from earned runs and innings pitched
+    Return earned-run-average from earned runs and innings pitched.
     """
-    return round(earned_runs*9/innings_pitched, 2)
+    return round(earned_runs*9/to_decimal(innings_pitched), 2)
 
 
 def calculate_WHIP(innings_pitched, walks, hits):
     """
     Return WHIP.
     """
-    return round((walks+hits)/innings_pitched, 2)
+    return round((walks+hits)/to_decimal(innings_pitched), 2)
 
 
 def calculate_BA(at_bats, hits):
@@ -331,6 +351,14 @@ def get_team_abbreviations(year):
     Return a list of all the MLB team abbreviations for the given year.
     """
     return sorted([team.abbreviation for team in Teams(year)])
+
+
+def starter_verified(last_name, full_name):
+    """
+    Return true if the given last name appears in the starter's full name.
+    ('Snell', 'Blake Snell') --> True
+    """
+    return last_name.lower() in full_name.lower()
 
 
 def print_game(char):
