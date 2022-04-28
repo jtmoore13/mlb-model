@@ -7,6 +7,18 @@ import re
 import math
 
 
+DARKCYAN = '\033[36m'
+GREEN = '\033[92m'
+YELLOW = '\033[93m'
+RED = '\033[91m'
+BOLD = '\033[1m'
+END = '\033[0m'
+CHECK = u'\u2713'
+GREEN_CHECK = GREEN+CHECK+END
+BOLD_DARKCYAN = BOLD+DARKCYAN
+DONE = BOLD+'Done '+GREEN_CHECK+END
+
+
 STAT_CHANGES = {
     'date': 'date_game',
     'home': 'team_homeORaway',
@@ -18,8 +30,6 @@ STAT_CHANGES = {
     'postgame_OPS': 'onbase_plus_slugging',
     'postgame_SLG': 'slugging_perc'
 }
-
-REGEX = re.compile('/players/./')
 
 TEAM_NAMES = {
     'ARI': 'Arizona Diamondbacks',
@@ -69,7 +79,9 @@ TEAM_ABBRS = {
     'Houston Astros': 'HOU',
     'Kansas City Royals': 'KCR',
     'Los Angeles Angels': 'LAA',
+    'Los Angeles Angels of Anaheim': 'LAA',
     'Los Angeles Dodgers': 'LAD',
+    'Florida Marlins': 'FLA',
     'Miami Marlins': 'MIA',
     'Milwaukee Brewers': 'MIL',
     'Minnesota Twins': 'MIN',
@@ -100,20 +112,6 @@ MONTHS = {
     'Nov': 11,
 }
 
-class format:
-   PURPLE = '\033[95m'
-   CYAN = '\033[96m'
-   DARKCYAN = '\033[36m'
-   BLUE = '\033[94m'
-   GREEN = '\033[92m'
-   YELLOW = '\033[93m'
-   RED = '\033[91m'
-   BOLD = '\033[1m'
-   UNDERLINE = '\033[4m'
-   END = '\033[0m'
-   CHECK = u'\u2713'
-   DEGREES = u'\xb0'
-
 
 def load_data(year, file):
     """
@@ -123,7 +121,7 @@ def load_data(year, file):
         return json.load(f)
 
 
-def is_future_game(game_id):
+def has_not_happened(game_id):
     """
     Return true if the game has not happened yet.
     """
@@ -140,25 +138,49 @@ def dump_data(year, file, dict):
         json.dump(dict, f, indent=4)
 
 
+def format_date_long(date_str):
+    """
+    Return a date string in the form of %weekday, %month %date, %year
+    '2021-06-18' --> 'Friday, June 18'
+    """
+    date = str_to_datetime(date_str)
+    return date.strftime('%A, %B %d')
+    
+
+def str_to_datetime(date_str):
+    """
+    Return a datetime object from a date string.
+    '2021-09-03' --> datetime obj
+    """
+    return datetime.date.fromisoformat(date_str)
+
+
 def get_starting_pitchers(soup):
     """
     Returns a len-2 list containing each starter's name and id.
-
+    First tuple is away, second tupule is home.
+    
     [('Lucas Giolito', 'giolilu01'), ('Dylan Bundy', 'bundydy01')]
     """
     lineups = str(soup.find('div', id='all_lineups')).split('\n')
     starters = []
     for i in range(len(lineups)):
         if '<td>P</td>' in lineups[i]:
+            # <td><a href="players/w/wilsocj01.shtml">C.J. Wilson</a></td><td>P</td>
             line = lineups[i-1].strip()
             shtml = line.find('.shtml')
             name = line[shtml+8:line.find('<', shtml)]
-            id = line[re.search(REGEX, line).span()[1]:shtml]
+            find_name = re.search(re.compile('/players/./'), line)
+            if find_name == None:
+                starters.append(('not_found', 'not_found'))
+                continue
+            id = line[find_name.span()[1]:shtml]
             starters.append((name, id))
             if len(starters) == 2:
                 break
+    # no <td>P</td> tags at all
     if len(starters) < 2:
-        return ('not_found', 'not_found')
+        return [('not_found', 'not_found'), ('not_found', 'not_found')]
     return starters[0], starters[1]
 
 
@@ -238,7 +260,6 @@ def get_stat_value(row, stat):
             return int(row.find('td', {'data-stat': stat}).text)
         except:
             return float(row.find('td', {'data-stat': stat}).text)
-
 
 
 def game_suspended(game):
@@ -375,18 +396,3 @@ def print_team(team_abbr):
     """
     print(team_abbr, end='')
     sys.stdout.flush()
-
-
-def print_check():
-    """
-    Print green check mark.
-    """           
-    print(format.GREEN+format.CHECK+format.END)
-
-
-def print_total(total_games, year):
-    """
-    Print the number of games added for a particular season.
-    """
-    print(f'\n{format.BOLD}{format.DARKCYAN}{total_games}{format.END} datapoints added for {year}{format.END} season.\n')
-
