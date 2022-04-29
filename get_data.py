@@ -2,7 +2,8 @@
 from bs4 import BeautifulSoup
 import requests
 import datetime
-import sys, os
+import sys, os, time
+from colorama import Fore, Style
 import utils
 
 
@@ -110,6 +111,7 @@ def get_bullpen_stats(season_games, pitcher_data, team_abbr, year):
 
     team_bullpen['2021-07-19'] = {'pregame_ERA': 3.48, ...}
     """
+    print(f'{utils.BACKSPACE*6} {team_abbr} {utils.CHECK}', end='', flush=True)
     game_page = SESSION.get(f'https://www.baseball-reference.com/teams/tgl.cgi?team={team_abbr}&t=p&year={year}').text
     soup = BeautifulSoup(game_page, 'lxml')
     remove_headers(soup)
@@ -396,7 +398,7 @@ def get_season_pitching(year, season_games):
                 continue
             stats = parse_pitcher_stats(line)
             add_pitcher_stats(stats, team, opp, date, season_pitching, season_games)
-        print(date, f'- {away_abbr} @ {home_abbr}', utils.CHECK)
+        utils.print_same_line(f'{date} - {away_abbr} @ {home_abbr} {utils.CHECK}')
 
     return season_pitching
 
@@ -407,14 +409,13 @@ def get_season_offense(team_abbr, year):
     Adds the desired stats from each row listed here: 
     https://www.baseball-reference.com/teams/tgl.cgi?team=BOS&t=b&year=2021'
     """
-    utils.print_team(team_abbr)
     season_page = SESSION.get(f'https://www.baseball-reference.com/teams/tgl.cgi?team={team_abbr}&t=b&year={year}').text
     soup = BeautifulSoup(season_page, 'lxml')
     remove_headers(soup)
     table = soup.find(id='team_batting_gamelogs').find_all('tr')[1:]
 
-    season_games = {}
     count = 0
+    season_games = {}
     for row in table:
         if utils.game_suspended(row):
             continue
@@ -427,8 +428,8 @@ def get_season_offense(team_abbr, year):
             date += ' (2)'
         season_games[date] = box_score
         count += 1
+    utils.print_same_line(f'{team_abbr} ({count} games) {utils.CHECK}')
 
-    print(f' ({count} games) {utils.CHECK}')
     return season_games
 
 
@@ -438,25 +439,26 @@ def get_data(years):
     the years list.
     """
     for year in years:
-        print(f'\n============================== {utils.BOLD_DARKCYAN+year+utils.END} ==============================')
+        print(f'\n====================== {year} ======================')
 
         # get hitting data
         season_games = {}
-        print(f'\n1) Scraping{utils.BOLD} [hitting]{utils.END} data from {year}...\n')
+        print(f'\nScraping{Style.BRIGHT} [hitting] {Style.RESET_ALL}data:')
         teams = utils.get_team_abbreviations(year)
         for team_abbr in teams:
             season_games[team_abbr] = get_season_offense(team_abbr, year)
-        print('Calculating offensive stats...'); sys.stdout.flush()
+        print('Calculating offensive stats...', flush=True, end=' ')
         calculate_offensive_stats(season_games)
 
         # get pitching data
-        print(f'\n2) Scraping{utils.BOLD} [pitching]{utils.END} data from {year}...\n')
+        print(f'\nScraping{Style.BRIGHT} [pitching] {Style.RESET_ALL}data:')
         pitcher_data = get_season_pitching(year, season_games)
-        print(f'Gathering each team\'s bullpen stats...')
+        print(f'Gathering each team\'s bullpen stats...', end='      ', flush=True)
         bullpen_data = {}
         for team_abbr in teams:
             bullpen_data[team_abbr] = get_bullpen_stats(season_games, pitcher_data, team_abbr, year)
-        print('Calculating pitching stats...'); sys.stdout.flush()
+        print(utils.BACKSPACE*5+utils.DONE)
+        print('Calculating pitching stats...', flush=True, end=' ')
         calculate_pitcher_stats(pitcher_data)
 
          # create folder and dump the data
@@ -483,16 +485,16 @@ def main():
     if update:
         yesterday = utils.get_day_before(TODAY)
         latest = utils.format_date_long(yesterday)
-        print(f'\nPulling {utils.BOLD_DARKCYAN}{years[0]}{utils.END} data through {utils.DARKCYAN+utils.BOLD+latest}...{utils.END}')
+        print(f'\nPulling {years[0]} data through {Style.BRIGHT+latest+Style.RESET_ALL}...')
         get_data(years)
-        print(f'\nData through {latest} {utils.GREEN+utils.BOLD}succesfully updated.\n{utils.END}')
+        print(f'\nData through {latest} {Fore.GREEN+Style.BRIGHT}succesfully updated.{Style.RESET_ALL}\n')
         return
 
-    time_period = years[0] if len(years) == 1 else f'{years[0]}-{years[-1]}'
+    time_period = {Style.BRIGHT} + (years[0] if len(years) == 1 else f'{years[0]}-{years[-1]}') + {Style.RESET_ALL}
     run = input(f'\nScrape MLB game data from {time_period}? This will take some time. (y/n) ')
     if run.lower().strip() == 'y':  
         get_data(years)
-        print(f'\nData from {time_period} {utils.GREEN+utils.BOLD}succesfully scraped.\n{utils.END}')
+        print(f'\nData from {time_period}{Fore.GREEN+Style.BRIGHT} succesfully scraped.{Style.RESET_ALL}\n')
 
 
 if __name__ == '__main__':

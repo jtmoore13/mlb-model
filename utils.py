@@ -5,18 +5,15 @@ import datetime
 import json
 import re
 import math
+from colorama import Fore, Style
 
 
-DARKCYAN = '\033[36m'
-GREEN = '\033[92m'
-YELLOW = '\033[93m'
-RED = '\033[91m'
-BOLD = '\033[1m'
-END = '\033[0m'
 CHECK = u'\u2713'
-GREEN_CHECK = GREEN+CHECK+END
-BOLD_DARKCYAN = BOLD+DARKCYAN
-DONE = BOLD+'Done '+GREEN_CHECK+END
+GREEN_CHECK = Fore.GREEN+CHECK+Style.RESET_ALL
+DONE = Style.BRIGHT+'Done '+GREEN_CHECK+Style.RESET_ALL
+LINE_UP = '\033[1A'
+LINE_CLEAR = '\x1b[2K'
+BACKSPACE = '\b'
 
 
 STAT_CHANGES = {
@@ -159,7 +156,7 @@ def get_starting_pitchers(soup):
     """
     Returns a len-2 list containing each starter's name and id.
     First tuple is away, second tupule is home.
-    
+
     [('Lucas Giolito', 'giolilu01'), ('Dylan Bundy', 'bundydy01')]
     """
     lineups = str(soup.find('div', id='all_lineups')).split('\n')
@@ -382,17 +379,8 @@ def starter_verified(last_name, full_name):
     return last_name.lower() in full_name.lower()
 
 
-def print_game(char):
+def print_same_line(message):
     """
-    Print the given character ('.' for a game, ' ' for no game)
     """
-    sys.stdout.write(char)
-    sys.stdout.flush()
-
-
-def print_team(team_abbr):
-    """
-    Print the team abbreviation.
-    """
-    print(team_abbr, end='')
-    sys.stdout.flush()
+    print(message)
+    print(LINE_UP, end=LINE_CLEAR)
