@@ -473,9 +473,15 @@ def main():
     """
     Run the functions to scrape the data. 
     """
+    allowed_args = ['-update', '-u', '-year']
+    args = sys.argv[1:]
+    for arg in args:
+        if arg not in allowed_args:
+            print(f'Invalid argument: {arg}')
+            return
+    
     years = [str(year) for year in range(START_YEAR, END_YEAR+1) if year != 2020]
     update = False
-    args = sys.argv[1:]
     if '-update' in args or '-u' in args:
         update = True
         years = [TODAY.year]
@@ -490,7 +496,7 @@ def main():
         print(f'\nData through {latest} {Fore.GREEN+Style.BRIGHT}succesfully updated.{Style.RESET_ALL}\n')
         return
 
-    time_period = {Style.BRIGHT} + (years[0] if len(years) == 1 else f'{years[0]}-{years[-1]}') + {Style.RESET_ALL}
+    time_period = Style.BRIGHT + (str(years[0]) if len(years) == 1 else f'{years[0]}-{years[-1]}') + Style.RESET_ALL
     run = input(f'\nScrape MLB game data from {time_period}? This will take some time. (y/n) ')
     if run.lower().strip() == 'y':  
         get_data(years)
