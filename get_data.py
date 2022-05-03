@@ -4,7 +4,7 @@ import requests
 import datetime
 import sys, os, time
 from colorama import Fore, Style
-import utils
+import data_utils
 
 
 GAME_DATA = 'game-data.json'
@@ -36,8 +36,8 @@ def add_yesterday_off(box_score, season_games):
     """
     Adds whether or not the specified team had an off day.
     """
-    date = utils.str_to_datetime(box_score['date'])
-    day_before = utils.get_day_before(date)
+    date = data_utils.str_to_datetime(box_score['date'])
+    day_before = data_utils.get_day_before(date)
     box_score['yesterday_off'] = int(day_before not in season_games)
     return box_score
 
@@ -111,7 +111,7 @@ def get_bullpen_stats(season_games, pitcher_data, team_abbr, year):
 
     team_bullpen['2021-07-19'] = {'pregame_ERA': 3.48, ...}
     """
-    print(f'{utils.BACKSPACE*6} {team_abbr} {utils.CHECK}', end='', flush=True)
+    print(f'{data_utils.BACKSPACE*6} {team_abbr} {data_utils.CHECK}', end='', flush=True)
     game_page = SESSION.get(f'https://www.baseball-reference.com/teams/tgl.cgi?team={team_abbr}&t=p&year={year}').text
     soup = BeautifulSoup(game_page, 'lxml')
     remove_headers(soup)
@@ -120,12 +120,12 @@ def get_bullpen_stats(season_games, pitcher_data, team_abbr, year):
     season_ER, season_BB, season_H, season_IP = (0, 0, 0, 0)
     team_bullpen = {}
     for game in season:
-        if utils.game_suspended(game):
+        if data_utils.game_suspended(game):
             continue
-        date = utils.get_stat_value(game, 'date_game')
+        date = data_utils.get_stat_value(game, 'date_game')
         if date in team_bullpen:
             date += ' (2)'
-        opp_abbr = utils.get_stat_value(game, 'opp_ID')
+        opp_abbr = data_utils.get_stat_value(game, 'opp_ID')
 
         # game was suspended but baseball-reference mistakenly doesn't have it marked 
         if date not in season_games[opp_abbr] or date not in season_games[team_abbr]:
@@ -138,14 +138,14 @@ def get_bullpen_stats(season_games, pitcher_data, team_abbr, year):
         last_name = season_games[opp_abbr][date]['opp_starter'].split('.')[-1]
         full_name = season_games[opp_abbr][date]['opp_starter_name']
         # starting pitcher disagreement between game log and recap page
-        if not utils.starter_verified(last_name, full_name):
+        if not data_utils.starter_verified(last_name, full_name):
             continue
 
         starter_stats = pitcher_data[starter_id][date]
-        game_H = utils.get_stat_value(game, 'H') - starter_stats['H']
-        game_IP = utils.add_IP(utils.get_stat_value(game, 'IP'), -starter_stats['IP'])
-        game_BB = utils.get_stat_value(game, 'BB') - starter_stats['BB']
-        game_ER = utils.get_stat_value(game, 'ER') - starter_stats['ER']
+        game_H = data_utils.get_stat_value(game, 'H') - starter_stats['H']
+        game_IP = data_utils.add_IP(data_utils.get_stat_value(game, 'IP'), -starter_stats['IP'])
+        game_BB = data_utils.get_stat_value(game, 'BB') - starter_stats['BB']
+        game_ER = data_utils.get_stat_value(game, 'ER') - starter_stats['ER']
 
         team_bullpen[date] = {
             'game_H': game_H,
@@ -154,11 +154,11 @@ def get_bullpen_stats(season_games, pitcher_data, team_abbr, year):
             'game_BB': game_BB,
         }
         if season_IP > 0:
-            team_bullpen[date]['pregame_ERA'] = utils.calculate_ERA(season_ER, season_IP)
-            team_bullpen[date]['pregame_WHIP'] = utils.calculate_WHIP(season_IP, season_BB, season_H)
+            team_bullpen[date]['pregame_ERA'] = data_utils.calculate_ERA(season_ER, season_IP)
+            team_bullpen[date]['pregame_WHIP'] = data_utils.calculate_WHIP(season_IP, season_BB, season_H)
 
         season_H += game_H
-        season_IP = utils.add_IP(season_IP, game_IP)
+        season_IP = data_utils.add_IP(season_IP, game_IP)
         season_BB += game_BB
         season_ER += game_ER
 
@@ -176,13 +176,13 @@ def calculate_pitcher_stats(pitcher_data):
         for date in appearences:
             game = appearences[date]
             if season_IP > 0:
-                game['pregame_ERA'] = utils.calculate_ERA(season_ER, season_IP)
-                game['pregame_WHIP'] = utils.calculate_WHIP(season_IP, season_BB, season_H)
+                game['pregame_ERA'] = data_utils.calculate_ERA(season_ER, season_IP)
+                game['pregame_WHIP'] = data_utils.calculate_WHIP(season_IP, season_BB, season_H)
             season_ER += game['ER']
             season_BB += game['BB']
             season_H += game['H']
-            season_IP = utils.add_IP(season_IP, game['IP'])
-    print(utils.DONE)
+            season_IP = data_utils.add_IP(season_IP, game['IP'])
+    print(data_utils.DONE)
 
 
 def calculate_offensive_stats(season_games):
@@ -255,25 +255,25 @@ def calculate_offensive_stats(season_games):
             game['pregame_OPS'] = prev_game['postgame_OPS']
 
             if home_AB > 0:
-                game['home_BA'] = utils.calculate_BA(home_AB, home_H)
-                game['home_OBP'] = utils.calculate_OBP(home_H, home_BB, home_HBP, home_AB, home_SF)
-                game['home_SLG'] = utils.calculate_SLG(home_1B, home_2B, home_3B, home_HR, home_AB)
-                game['home_OPS'] = utils.calculate_OPS(game['home_OBP'], game['home_SLG'])
+                game['home_BA'] = data_utils.calculate_BA(home_AB, home_H)
+                game['home_OBP'] = data_utils.calculate_OBP(home_H, home_BB, home_HBP, home_AB, home_SF)
+                game['home_SLG'] = data_utils.calculate_SLG(home_1B, home_2B, home_3B, home_HR, home_AB)
+                game['home_OPS'] = data_utils.calculate_OPS(game['home_OBP'], game['home_SLG'])
             if away_AB > 0:
-                game['away_BA'] = utils.calculate_BA(away_AB, away_H)
-                game['away_OBP'] = utils.calculate_OBP(away_H, away_BB, away_HBP, away_AB, away_SF)
-                game['away_SLG'] = utils.calculate_SLG(away_1B, away_2B, away_3B, away_HR, away_AB)
-                game['away_OPS'] = utils.calculate_OPS(game['away_OBP'], game['away_SLG'])
+                game['away_BA'] = data_utils.calculate_BA(away_AB, away_H)
+                game['away_OBP'] = data_utils.calculate_OBP(away_H, away_BB, away_HBP, away_AB, away_SF)
+                game['away_SLG'] = data_utils.calculate_SLG(away_1B, away_2B, away_3B, away_HR, away_AB)
+                game['away_OPS'] = data_utils.calculate_OPS(game['away_OBP'], game['away_SLG'])
             if right_AB > 0:
-                game['right_BA'] = utils.calculate_BA(right_AB, right_H)
-                game['right_OBP'] = utils.calculate_OBP(right_H, right_BB, right_HBP, right_AB, right_SF)
-                game['right_SLG'] = utils.calculate_SLG(right_1B, right_2B, right_3B, right_HR, right_AB)
-                game['right_OPS'] = utils.calculate_OPS(game['right_OBP'], game['right_SLG'])
+                game['right_BA'] = data_utils.calculate_BA(right_AB, right_H)
+                game['right_OBP'] = data_utils.calculate_OBP(right_H, right_BB, right_HBP, right_AB, right_SF)
+                game['right_SLG'] = data_utils.calculate_SLG(right_1B, right_2B, right_3B, right_HR, right_AB)
+                game['right_OPS'] = data_utils.calculate_OPS(game['right_OBP'], game['right_SLG'])
             if left_AB > 0:
-                game['left_BA'] = utils.calculate_BA(left_AB, left_H)
-                game['left_OBP'] = utils.calculate_OBP(left_H, left_BB, left_HBP, left_AB, left_SF)
-                game['left_SLG'] = utils.calculate_SLG(left_1B, left_2B, left_3B, left_HR, left_AB)
-                game['left_OPS'] = utils.calculate_OPS(game['left_OBP'], game['left_SLG'])
+                game['left_BA'] = data_utils.calculate_BA(left_AB, left_H)
+                game['left_OBP'] = data_utils.calculate_OBP(left_H, left_BB, left_HBP, left_AB, left_SF)
+                game['left_SLG'] = data_utils.calculate_SLG(left_1B, left_2B, left_3B, left_HR, left_AB)
+                game['left_OPS'] = data_utils.calculate_OPS(game['left_OBP'], game['left_SLG'])
 
             if game['home']:
                 home_H += game['H']
@@ -334,12 +334,12 @@ def calculate_offensive_stats(season_games):
                     recent_3B += prev_game['3B']
                     recent_HR += prev_game['HR']
 
-                game[f'{n}-day_BA'] = utils.calculate_BA(recent_AB, recent_H)
-                game[f'{n}-day_OBP'] = utils.calculate_OBP(recent_H, recent_BB, recent_HBP, recent_AB, recent_SF)
-                game[f'{n}-day_SLG'] = utils.calculate_SLG(recent_1B, recent_2B, recent_3B, recent_HR, recent_AB)
-                game[f'{n}-day-OPS'] = utils.calculate_OPS(game[f'{n}-day_OBP'], game[f'{n}-day_SLG'])
+                game[f'{n}-day_BA'] = data_utils.calculate_BA(recent_AB, recent_H)
+                game[f'{n}-day_OBP'] = data_utils.calculate_OBP(recent_H, recent_BB, recent_HBP, recent_AB, recent_SF)
+                game[f'{n}-day_SLG'] = data_utils.calculate_SLG(recent_1B, recent_2B, recent_3B, recent_HR, recent_AB)
+                game[f'{n}-day-OPS'] = data_utils.calculate_OPS(game[f'{n}-day_OBP'], game[f'{n}-day_SLG'])
 
-    print(utils.DONE)
+    print(data_utils.DONE)
 
 
 def get_season_pitching(year, season_games):
@@ -355,28 +355,28 @@ def get_season_pitching(year, season_games):
     season_pitching = {}
     for game in schedule:
         game_id = game.select('a')[2].get('href')
-        if utils.has_not_happened(game_id):
+        if data_utils.has_not_happened(game_id):
             break
         game_page = SESSION.get('https://www.baseball-reference.com/' + game_id).text
         soup = BeautifulSoup(game_page, 'lxml')
-        if utils.is_playoffs(soup):
+        if data_utils.is_playoffs(soup):
             break
-        if utils.was_suspended(soup):
+        if data_utils.was_suspended(soup):
             continue
 
-        date, away_abbr, home_abbr = utils.parse_title(soup.title.text)
-        if utils.is_second_game(soup):
+        date, away_abbr, home_abbr = data_utils.parse_title(soup.title.text)
+        if data_utils.is_second_game(soup):
             date += ' (2)'
 
-        away_starter, home_starter = utils.get_starting_pitchers(soup)
+        away_starter, home_starter = data_utils.get_starting_pitchers(soup)
         season_games[away_abbr][date]['opp_starter_name'] = home_starter[0]
         season_games[away_abbr][date]['opp_starter_id'] = home_starter[1]
         season_games[home_abbr][date]['opp_starter_name'] = away_starter[0]
         season_games[home_abbr][date]['opp_starter_id'] = away_starter[1]
 
         # add details/features that are found on this page (night, temp)
-        night_game = utils.get_night_game(soup)
-        temp = utils.get_temperature(soup)
+        night_game = data_utils.get_night_game(soup)
+        temp = data_utils.get_temperature(soup)
         season_games[home_abbr][date]['night_game'] = night_game
         season_games[away_abbr][date]['night_game'] = night_game
         season_games[home_abbr][date]['temp'] = temp
@@ -389,16 +389,16 @@ def get_season_pitching(year, season_games):
         for line in game_page.split('\n'):
             if team_totals == 2:
                 break
-            if not utils.is_pitching_row(line):
+            if not data_utils.is_pitching_row(line):
                 continue
-            if utils.has_team_totals(line):
+            if data_utils.has_team_totals(line):
                 team = home_abbr
                 opp = away_abbr
                 team_totals += 1
                 continue
             stats = parse_pitcher_stats(line)
             add_pitcher_stats(stats, team, opp, date, season_pitching, season_games)
-        utils.print_same_line(f'{date} - {away_abbr} @ {home_abbr} {utils.CHECK}')
+        data_utils.print_same_line(f'{date} - {away_abbr} @ {home_abbr} {data_utils.CHECK}')
 
     return season_pitching
 
@@ -417,18 +417,18 @@ def get_season_offense(team_abbr, year):
     count = 0
     season_games = {}
     for row in table:
-        if utils.game_suspended(row):
+        if data_utils.game_suspended(row):
             continue
         box_score = {}
         for stat in ALL_STATS:
-            box_score[stat] = utils.get_stat_value(row, stat)
+            box_score[stat] = data_utils.get_stat_value(row, stat)
         add_yesterday_off(box_score, season_games)
         date = box_score['date']
         if date in season_games:
             date += ' (2)'
         season_games[date] = box_score
         count += 1
-    utils.print_same_line(f'{team_abbr} ({count} games) {utils.CHECK}')
+    data_utils.print_same_line(f'{team_abbr} ({count} games) {data_utils.CHECK}')
 
     return season_games
 
@@ -444,7 +444,7 @@ def get_data(years):
         # get hitting data
         season_games = {}
         print(f'\nScraping{Style.BRIGHT} [hitting] {Style.RESET_ALL}data:')
-        teams = utils.get_team_abbreviations(year)
+        teams = data_utils.get_team_abbreviations(year)
         for team_abbr in teams:
             season_games[team_abbr] = get_season_offense(team_abbr, year)
         print('Calculating offensive stats...', flush=True, end=' ')
@@ -457,16 +457,16 @@ def get_data(years):
         bullpen_data = {}
         for team_abbr in teams:
             bullpen_data[team_abbr] = get_bullpen_stats(season_games, pitcher_data, team_abbr, year)
-        print(utils.BACKSPACE*5+utils.DONE)
+        print(data_utils.BACKSPACE*5+data_utils.DONE)
         print('Calculating pitching stats...', flush=True, end=' ')
         calculate_pitcher_stats(pitcher_data)
 
          # create folder and dump the data
         if not os.path.isdir(f'data/{year}'):
             os.mkdir(f'data/{year}')
-        utils.dump_data(year, BULLPEN_DATA, bullpen_data)
-        utils.dump_data(year, PITCHER_DATA, pitcher_data)
-        utils.dump_data(year, GAME_DATA, season_games)
+        data_utils.dump_data(year, BULLPEN_DATA, bullpen_data)
+        data_utils.dump_data(year, PITCHER_DATA, pitcher_data)
+        data_utils.dump_data(year, GAME_DATA, season_games)
 
 
 def main():
@@ -489,8 +489,8 @@ def main():
         years = [args[args.index('-year')+1]]
 
     if update:
-        yesterday = utils.get_day_before(TODAY)
-        latest = utils.format_date_long(yesterday)
+        yesterday = data_utils.get_day_before(TODAY)
+        latest = data_utils.format_date_long(yesterday)
         print(f'\nPulling {years[0]} data through {Style.BRIGHT+latest+Style.RESET_ALL}...')
         get_data(years)
         print(f'\nData through {latest} {Fore.GREEN+Style.BRIGHT}succesfully updated.{Style.RESET_ALL}\n')

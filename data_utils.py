@@ -7,6 +7,8 @@ import re
 import math
 from colorama import Fore, Style
 
+import get_data
+
 
 CHECK = u'\u2713'
 GREEN_CHECK = Fore.GREEN+CHECK+Style.RESET_ALL
@@ -29,6 +31,7 @@ STAT_CHANGES = {
 }
 
 TEAM_NAMES = {
+    'ANA': 'Anaheim Angels',
     'ARI': 'Arizona Diamondbacks',
     'ATL': 'Atlanta Braves',
     'BAL': 'Baltimore Orioles', 
@@ -56,6 +59,7 @@ TEAM_NAMES = {
     'SEA': 'Seattle Mariners', 
     'STL': 'St. Louis Cardinals', 
     'TBR': 'Tampa Bay Rays', 
+    'TBD': 'Tampa Bay Devil Rays',
     'TEX': 'Texas Rangers', 
     'TOR': 'Toronto Blue Jays', 
     'WSN': 'Washington Nationals',
@@ -76,7 +80,7 @@ TEAM_ABBRS = {
     'Houston Astros': 'HOU',
     'Kansas City Royals': 'KCR',
     'Los Angeles Angels': 'LAA',
-    'Los Angeles Angels of Anaheim': 'LAA',
+    'Los Angeles Angels of Anaheim': 'ANA',
     'Los Angeles Dodgers': 'LAD',
     'Florida Marlins': 'FLA',
     'Miami Marlins': 'MIA',
@@ -92,10 +96,49 @@ TEAM_ABBRS = {
     'Seattle Mariners': 'SEA',
     'St. Louis Cardinals': 'STL',
     'Tampa Bay Rays': 'TBR',
+    'Tampa Bay Devil Rays': 'TBD',
     'Texas Rangers': 'TEX',
     'Toronto Blue Jays': 'TOR',
     'Washington Nationals': 'WSN'
 }
+
+
+STADIUM_SCORES = {
+    'ARI': 1.044,
+    'ATL': 1.063,
+    'BAL': 1.088, 
+    'BOS': 1.174, 
+    'CHW': .995, 
+    'CHC': .968, 
+    'CIN': 1.162, 
+    'CLE': .984,
+    'COL': 1.334, 
+    'DET': .970, 
+    'HOU': 1.005, 
+    'KCR': 1.103,
+    'LAA': 1.068,
+    'LAD': .928, 
+    'MIA': .982, 
+    'FLA': .982,
+    'MIL': 1.014, 
+    'MIN': .980, 
+    'NYM': .881, 
+    'NYY': .952, 
+    'OAK': .878, 
+    'PHI': 1.000, 
+    'PIT': 1.020, 
+    'SDP': .885, 
+    'SFG': .908, 
+    'SEA': .911, 
+    'STL': .884, 
+    'TBR': .862,
+    'TBD': .862,
+    'TEX': .963, 
+    'TOR': 1.017, 
+    'WSN': .989,
+}
+
+
 
 MONTHS = {
     'Mar': 3, 
@@ -384,3 +427,21 @@ def print_same_line(message):
     """
     print(message)
     print(LINE_UP, end=LINE_CLEAR)
+
+
+def get_data_dicts():
+    """
+    Load the data for each year into separate dictionaries and return 
+    them. 
+    """
+    print('Loading data from files...')
+    game_data = {}
+    pitcher_data = {}
+    bullpen_data = {}
+    years = [str(year) for year in range(get_data.START_YEAR, get_data.END_YEAR+1) if year != 2020]
+    for year in years:  
+        game_data[year] = load_data(year, get_data.GAME_DATA)
+        pitcher_data[year] = load_data(year, get_data.PITCHER_DATA)
+        bullpen_data[year] = load_data(year, get_data.BULLPEN_DATA)
+
+    return game_data, pitcher_data, bullpen_data

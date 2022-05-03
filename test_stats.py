@@ -1,11 +1,11 @@
 
 import random as rand
 import datetime
-import utils
+import data_utils
 import get_data
 
 
-GAME_DATA, PITCHER_DATA, BULLPEN_DATA = utils.get_data_dicts()
+GAME_DATA, PITCHER_DATA, BULLPEN_DATA = data_utils.get_data_dicts()
 YEARS = list(GAME_DATA.keys())
 
 
@@ -88,6 +88,7 @@ def test_bullpen_season_stats():
     for year in BULLPEN_DATA:
         data = BULLPEN_DATA[year]
         for team in data:
+            print(team)
             dates = list(data[team])
             # choose a random date 10 times, see if stats were calculated correctly
             for i in range(10):
@@ -97,12 +98,12 @@ def test_bullpen_season_stats():
                 season_IP, season_ER, season_BB, season_H = (0, 0, 0, 0)
                 for date in dates[:choice]:
                     game = data[team][date]
-                    season_IP = utils.add_IP(season_IP, game['game_IP'])
+                    season_IP = data_utils.add_IP(season_IP, game['game_IP'])
                     season_ER += game['game_ER']
                     season_BB += game['game_BB']
                     season_H += game['game_H']
-                assert(chosen_game['pregame_ERA'] == utils.calculate_ERA(season_ER, season_IP))
-                assert(chosen_game['pregame_WHIP'] == utils.calculate_WHIP(season_IP, season_BB, season_H))
+                assert(chosen_game['pregame_ERA'] == data_utils.calculate_ERA(season_ER, season_IP))
+                assert(chosen_game['pregame_WHIP'] == data_utils.calculate_WHIP(season_IP, season_BB, season_H))
 
 
 def check_bullpen(game, innings_pitched, hits, earned_runs, walks):
@@ -137,23 +138,23 @@ def test_ERA_fn():
     """
     Test that calculate_ERA() in utils.py works.
     """
-    assert(utils.calculate_ERA(1, 1) == 9)
-    assert(utils.calculate_ERA(2, 2.1) == 7.71)
-    assert(utils.calculate_ERA(0, 9) == 0)
-    assert(utils.calculate_ERA(1, 21) == .43)
-    assert(utils.calculate_ERA(23, 40) == 5.17)
-    assert(utils.calculate_ERA(258, 974) == 2.38)
+    assert(data_utils.calculate_ERA(1, 1) == 9)
+    assert(data_utils.calculate_ERA(2, 2.1) == 7.71)
+    assert(data_utils.calculate_ERA(0, 9) == 0)
+    assert(data_utils.calculate_ERA(1, 21) == .43)
+    assert(data_utils.calculate_ERA(23, 40) == 5.17)
+    assert(data_utils.calculate_ERA(258, 974) == 2.38)
 
 
 def test_WHIP_fn():
     """
     Test that calculate_WHIP() in utils.py works.
     """
-    assert(utils.calculate_WHIP(7, 0, 0) == 0)
-    assert(utils.calculate_WHIP(1, 1, 0) == 1)
-    assert(utils.calculate_WHIP(9, 8, 4) == 1.33)
-    assert(utils.calculate_WHIP(21, 1, 0) == .05)
-    assert(utils.calculate_WHIP(428, 340, 98) == 1.02)
+    assert(data_utils.calculate_WHIP(7, 0, 0) == 0)
+    assert(data_utils.calculate_WHIP(1, 1, 0) == 1)
+    assert(data_utils.calculate_WHIP(9, 8, 4) == 1.33)
+    assert(data_utils.calculate_WHIP(21, 1, 0) == .05)
+    assert(data_utils.calculate_WHIP(428, 340, 98) == 1.02)
 
 
 def test_ERA_stats():
