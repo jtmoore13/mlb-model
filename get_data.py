@@ -12,7 +12,7 @@ PITCHER_DATA = 'pitcher-data.json'
 BULLPEN_DATA = 'team-bullpen-data.json'
 
 START_YEAR = 2010
-END_YEAR = 2021
+END_YEAR = 2022
 TODAY = datetime.date.today()
 
 PITCHING_STATS = ['IP', 'ER', 'H', 'BB']
@@ -129,6 +129,9 @@ def get_bullpen_stats(season_games, pitcher_data, team_abbr, year):
 
         # game was suspended but baseball-reference mistakenly doesn't have it marked 
         if date not in season_games[opp_abbr] or date not in season_games[team_abbr]:
+            continue
+        # game not listed as suspended on hitting log, but suspended on the game recap page
+        if 'opp_starter_id' not in season_games[opp_abbr][date] or 'opp_starter_id' not in season_games[team_abbr][date]:
             continue
         # game page did not list a starting pitcher
         if season_games[opp_abbr][date]['opp_starter_id'] == 'not_found':
@@ -473,10 +476,21 @@ def main():
     """
     Run the functions to scrape the data. 
     """
+
+    # page = SESSION.get(f'https://www.baseball-reference.com/boxes/MIN/MIN202205110.shtml').text
+    # soup = BeautifulSoup(page, 'lxml')
+    # scorebox = soup.find('div', class_='scorebox_meta').text
+    # print(scorebox)
+    # if 'suspended' in scorebox:
+    #     print('ya')
+    # return
+
+
+
     allowed_args = ['-update', '-u', '-year']
     args = sys.argv[1:]
     for arg in args:
-        if arg not in allowed_args:
+        if '-' in arg and arg not in allowed_args:
             print(f'Invalid argument: {arg}')
             return
     
