@@ -2,11 +2,9 @@
 import numpy as np
 from numpy import mean
 import pandas as pd
+from sklearn.compose import TransformedTargetRegressor
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV, cross_val_score, KFold
-from sklearn.feature_selection import RFECV
-from sklearn.linear_model import LinearRegression
-from sklearn.inspection import permutation_importance
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, RandomizedSearchCV, KFold
 from sklearn.metrics import mean_squared_error
 from matplotlib import pyplot as plt
 import xgboost as xgb
@@ -19,9 +17,11 @@ import sys
 import data_utils, model_utils
 
 
-GAME_DATA, PITCHER_DATA, BULLPEN_DATA = data_utils.get_data_dicts()
+START_YEAR = 2010
+END_YEAR = 2022
+GAME_DATA, PITCHER_DATA, BULLPEN_DATA = data_utils.get_data_dicts(START_YEAR, END_YEAR)
 RUN_MAX = 100
-
+MODEL_FILE = 'my_model.sav'
 
 FEATURE_LIST = [
     'pregame_BA',
@@ -38,7 +38,31 @@ FEATURE_LIST = [
     'opp_bullpen_WHIP',
     'stadium_score',
     'temp',
+    'over_under'
 ]
+
+def make_game_sample(game, year, team, date):
+    """
+    """
+    sample = []             
+    throw = 'right' if game['opp_starter_righty'] else 'left'
+    loc = 'home' if game['home'] else 'away'
+    sample.append(game['pregame_BA'])
+    sample.append(game['pregame_SLG'])
+    sample.append(game['10-day_BA'])
+    sample.append(game['10-day_SLG'])
+    sample.append(game[f'{throw}_BA'])
+    sample.append(game[f'{throw}_SLG'])
+    sample.append(game[f'{loc}_BA'])
+    sample.append(game[f'{loc}_SLG'])
+    sample.append(data_utils.get_pitcher_ERA(PITCHER_DATA, year, game['opp_starter_id'], date))
+    sample.append(data_utils.get_pitcher_WHIP(PITCHER_DATA, year, game['opp_starter_id'], date))
+    sample.append(data_utils.get_bullpen_ERA(BULLPEN_DATA, year, game['opp'], date))
+    sample.append(data_utils.get_bullpen_WHIP(BULLPEN_DATA, year, game['opp'], date))
+    sample.append(data_utils.get_stadium_score(team, game))
+    sample.append(game['temp'])
+    sample.append(game['over_under'])
+    return np.array(sample)
 
 
 def is_incomplete_sample(date, game):
@@ -51,6 +75,8 @@ def is_incomplete_sample(date, game):
     if 'opp_starter_id' not in game or game['opp_starter_id'] == 'not_found':
         return True
     if 'pregame_BA' not in game:
+        return True
+    if 'over_under' not in game:
         return True
     if '10-day_BA' not in game or '15-day_BA' not in game:
         return True
@@ -76,84 +102,82 @@ def is_incomplete_sample(date, game):
     return False
 
 
-def add_hitting_stats(key, sample, game):
-    """
-    Adds hitting data to the given sample. The split to 
-    add is specified by the key.
-    """
-    if key == 'opp_starter_righty':
-        split = 'right' if game[key] else 'left'
-    elif key == 'home':
-        split = 'home' if game[key] else 'away'
-    else:
-        split = key
-    sample.append(game[f'{split}_BA'])
-    sample.append(game[f'{split}_SLG'])
-
-
-def get_samples():
+def get_samples(test_years):
     """
     Parse the game data and form data samples. Return 2d array of samples
     and a 1d array of targets.
     """
     print('Gathering samples...')
-    all_samples = []
+    incomplete = 0
+    samples = []
     targets = []
-    count = 0
+    train_samples = []
+    train_targets = []
+    test_samples = []
+    test_targets = []
+
+
     for year in GAME_DATA:
         for team in GAME_DATA[year]:
             for date in list(GAME_DATA[year][team])[1:]:
                 game = GAME_DATA[year][team][date]
                 if is_incomplete_sample(date, game):
-                    count += 1
+                    incomplete += 1
                     continue
-                sample = []
-                add_hitting_stats('pregame', sample, game)
-                add_hitting_stats('10-day', sample, game)
-                add_hitting_stats('opp_starter_righty', sample, game)
-                add_hitting_stats('home', sample, game)
-                sample.append(model_utils.get_pitcher_ERA(PITCHER_DATA, year, game['opp_starter_id'], date))
-                sample.append(model_utils.get_pitcher_WHIP(PITCHER_DATA, year, game['opp_starter_id'], date))
-                sample.append(model_utils.get_bullpen_ERA(BULLPEN_DATA, year, game['opp'], date))
-                sample.append(model_utils.get_bullpen_WHIP(BULLPEN_DATA, year, game['opp'], date))
-                sample.append(model_utils.get_stadium_score(team, game))
-                sample.append(game['temp'])
-
-                all_samples.append(sample)
+                sample = make_game_sample(game, year, team, date)
+                samples.append(sample)
                 targets.append(game['R'])
+                if year not in test_years:
+                    train_samples.append(sample)
+                    train_targets.append(game['R'])
+                else:
+                    test_samples.append(sample)
+                    test_targets.append(game['R'])
 
-    print(f'{Style.DIM}{len(all_samples)} complete samples.')
-    print(f'{count} incomplete samples.\n{Style.RESET_ALL}')
-    df = pd.DataFrame(all_samples, columns=FEATURE_LIST)
-    return df, np.array(targets)
+    print(f'{Style.DIM}{len(samples)} complete samples.')
+    print(f'{incomplete} incomplete samples.\n{Style.RESET_ALL}')
+
+    df = pd.DataFrame(samples, columns=FEATURE_LIST)
+    df['runs_scored'] = targets
+    train_df = pd.DataFrame(train_samples, columns=FEATURE_LIST)
+    train_df['runs_scored'] = train_targets
+    test_df = pd.DataFrame(test_samples, columns=FEATURE_LIST)
+    test_df['runs_scored'] = test_targets
+    return df, train_df, test_df
 
 
-def run_grid_search(param_grid, samples, targets):
+def compare_to_vegas(rf, years):
     """
-    Performs GridSearchCV for the best hyperparameters for XGBRFRegressor.
-    Prints the best parameters and RMSE train/test values.
     """
+    for year in years:
+        for team in GAME_DATA[year]:
+            for date in GAME_DATA[year][team]:
+                game1 = GAME_DATA[year][team][date]
+                game2 = GAME_DATA[year][game1['opp']][date]
+                if is_incomplete_sample(date, game1) or is_incomplete_sample(date, game2):
+                    continue
+                sample1 = make_game_sample(game1, year, team, date).reshape(1, 15)
+                sample2 = make_game_sample(game2, year, game1['opp'], date).reshape(1, 15)
+                prediction1 = float(rf.predict(sample1)[0])
+                prediction2 = float(rf.predict(sample2)[0])
+
+                my_total = round(prediction1 + prediction2, 2)
+                vegas_total = game1['over_under']
+                actual_total = game1['R'] + game2['R']
+
+                print(f'{team} vs {game1["opp"]} {date}')
+                print(f'My total:     {my_total}')
+                print(f'Vegas total:  {vegas_total}')
+                print(f'Actual score: {actual_total}\n')
+
+
+def develop(rf, df):
+    """
+    Main function used to develop and test the model.
+    """
+    samples, targets = df.loc[:, df.columns!='runs_scored'], df['runs_scored']
     X_train, X_test, y_train, y_test = train_test_split(samples, targets)
 
-    rf = xgb.XGBRFRegressor(n_estimators=1000, max_depth=7, gamma=0, min_child_weight=7, subsample=.6, colsample_bytree=.8, reg_alpha=.1)
-    tuned_rf = GridSearchCV(rf, param_grid, n_jobs=-1, scoring='neg_root_mean_squared_error')
-    tuned_rf.fit(X_train, y_train)
-    predictions = tuned_rf.best_estimator_.predict(X_test)
-    train_rmse = round(tuned_rf.best_score_*-1, 3)
-    test_rmse = -1*round(tuned_rf.score(X_test, y_test), 3)
-    print(f'Best estimators:    {tuned_rf.best_params_}')
-    print(f'Best training rmse: {train_rmse}')
-    print(f'Test rmse:          {test_rmse}')
-
-
-def main():
-    """
-    """
-    samples, targets = get_samples()
-    X_train, X_test, y_train, y_test = train_test_split(samples, targets)
-
-    # initialize random forest and get training score
-    rf = xgb.XGBRFRegressor(n_estimators=100, max_depth=7, gamma=0, min_child_weight=7, subsample=.6, colsample_bytree=.8, reg_alpha=.1)
     cv = KFold(n_splits=3, shuffle=True, random_state=42)
     train_scores = cross_val_score(rf, X_train, y_train, scoring='neg_root_mean_squared_error', cv=cv, n_jobs=-1)
     train_rmse = round(-1*mean(train_scores), 2)
@@ -165,16 +189,9 @@ def main():
     test_rmse = round(mean_squared_error(y_test, predictions, squared=False), 2)
     print(f'test RMSE:  {test_rmse}')
 
-    # compare to previous models
-    best_log = model_utils.best_model_log()
-    if test_rmse < best_log['best_rmse']:
-        model_utils.set_best_model(test_rmse, RUN_MAX, FEATURE_LIST)
-        print(Fore.GREEN+'New best model!'+Style.RESET_ALL)
-
     # create correlation heatmap
-    samples['runs_scored'] = targets
     plt.figure(figsize=(35, 35))
-    heatmap = sb.heatmap(samples.corr(), cmap='Blues', annot=True)
+    heatmap = sb.heatmap(df.corr(), cmap='Blues', annot=True)
     plt.savefig('figures/correlation_heatmap.png')
     plt.close()
 
@@ -186,6 +203,38 @@ def main():
     plt.tight_layout()
     plt.savefig('figures/feature_importance.png')
     plt.close()
+
+    # compare to previous best model
+    best_log = model_utils.best_model_log()
+    if test_rmse < best_log['best_rmse']:
+        model_utils.set_best_model(test_rmse, RUN_MAX, FEATURE_LIST)
+        print(Fore.GREEN+'New best model!'+Style.RESET_ALL)
+
+
+def fit_and_save(rf, df, filename):
+    """
+    """
+    samples, targets = df.loc[:, df.columns!='runs_scored'], df['runs_scored']
+    rf.fit(samples, targets)
+    pickle.dump(rf, open(filename, 'wb'))
+ 
+
+def main():
+    """
+    """
+    rf = xgb.XGBRFRegressor(n_estimators=1000, max_depth=7, gamma=0, min_child_weight=7, subsample=.6, reg_alpha=.1)
+    test_years = ['2018', '2019', '2021']
+    df, train_df, test_df = get_samples(test_years)
+
+    args = sys.argv
+    if '-d' in args or '-develop' in args:
+        develop(rf, df)
+    elif '-f' in args or '-fit' in args:
+        fit_and_save(rf, df, MODEL_FILE)
+    elif '-c' in args or '-compare' in args:
+        X_train, y_train = train_df.loc[:, train_df.columns!='runs_scored'], train_df['runs_scored']
+        rf.fit(X_train, y_train)
+        compare_to_vegas(rf, test_years)
 
 
 if __name__ == '__main__':
