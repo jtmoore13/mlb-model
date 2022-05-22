@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import math
 import datetime
-import utils_data
+import data_utils
 
 
 TEAM_NAMES = {
@@ -45,7 +45,7 @@ def main():
     start_year = 2010
     end_year = 2021
     years = [str(year) for year in range(start_year, end_year+1) if year != 2020]
-    game_data, pitcher_data, bullpen_data = utils_data.get_data_dicts(start_year, end_year)
+    game_data, pitcher_data, bullpen_data = data_utils.get_data_dicts(start_year, end_year)
 
     for year in years:
         odds = pd.read_excel(f'vegas_odds/{year}.xlsx')
@@ -65,12 +65,10 @@ def main():
             # mostly playoff games
             if date not in game_data[year][team]:
                 continue
-            
             over_under = row['Open OU']
             ou_odds = row['Unnamed: 18']
             moneyline = row['Open']
             home = 1 if row['VH'] == 'H' else 0
-
             runs_scored = row['Final']
             game_runs = game_data[year][team][date]['R']
             if game_runs != runs_scored:
@@ -86,7 +84,7 @@ def main():
             game_data[year][team][date]['over_under'] = over_under
             game_data[year][team][date]['ou_odds'] = ou_odds
 
-        utils_data.dump_data(year, 'game-data.json', game_data[year])
+        data_utils.dump_data(year, 'game-data.json', game_data[year])
 
 
 if __name__ == '__main__':
