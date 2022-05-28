@@ -2,7 +2,7 @@
 from bs4 import BeautifulSoup
 import requests
 import datetime
-import sys, os, time
+import sys, os
 from colorama import Fore, Style
 import data_utils, model
 

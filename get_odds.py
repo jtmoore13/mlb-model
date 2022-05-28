@@ -1,10 +1,8 @@
 
-import json
 import pandas as pd
-import numpy as np
-import math
 import datetime
 import data_utils
+from pybaseball import team_game_logs
 
 
 TEAM_NAMES = {
@@ -65,12 +63,10 @@ def main():
             # mostly playoff games
             if date not in game_data[year][team]:
                 continue
-            open_over_under = row['Open OU']
-            open_ou_odds = row['Unnamed: 18']
-            close_over_under = row['Close OU']
 
-            moneyline = row['Open']
-            home = 1 if row['VH'] == 'H' else 0
+            open_over_under = row['Open OU']
+            open_ou_odds = row['Open OU Odds']
+            close_over_under = row['Close OU']
             runs_scored = row['Final']
             game_runs = game_data[year][team][date]['R']
             if game_runs != runs_scored:
