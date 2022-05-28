@@ -43,7 +43,7 @@ def main():
     """
     """
     start_year = 2010
-    end_year = 2021
+    end_year = 2022
     years = [str(year) for year in range(start_year, end_year+1) if year != 2020]
     game_data, pitcher_data, bullpen_data = data_utils.get_data_dicts(start_year, end_year)
 
@@ -65,8 +65,10 @@ def main():
             # mostly playoff games
             if date not in game_data[year][team]:
                 continue
-            over_under = row['Open OU']
-            ou_odds = row['Unnamed: 18']
+            open_over_under = row['Open OU']
+            open_ou_odds = row['Unnamed: 18']
+            close_over_under = row['Close OU']
+
             moneyline = row['Open']
             home = 1 if row['VH'] == 'H' else 0
             runs_scored = row['Final']
@@ -81,8 +83,9 @@ def main():
                 if runs_scored != game_runs:
                     print('MIXUP:', team, opp_team, date, f'-- [{team}]', 'me:', game_runs, 'vs odds sheet:', runs_scored)
             
-            game_data[year][team][date]['over_under'] = over_under
-            game_data[year][team][date]['ou_odds'] = ou_odds
+            game_data[year][team][date]['open_over_under'] = open_over_under
+            game_data[year][team][date]['close_over_under'] = close_over_under
+            game_data[year][team][date]['open_ou_odds'] = open_ou_odds
 
         data_utils.dump_data(year, 'game-data.json', game_data[year])
 
