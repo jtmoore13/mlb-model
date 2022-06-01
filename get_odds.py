@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import data_utils
 from pybaseball import team_game_logs
-
+import sys
 
 TEAM_NAMES = {
     'LOS': 'LAD',
@@ -44,6 +44,8 @@ def main():
     end_year = 2022
     years = [str(year) for year in range(start_year, end_year+1) if year != 2020]
     game_data, pitcher_data, bullpen_data = data_utils.get_data_dicts(start_year, end_year)
+    if 'l' in sys.argv or '-latest' in sys.argv:
+        years = [datetime.date.today().year]
 
     for year in years:
         odds = pd.read_excel(f'vegas_odds/{year}.xlsx')
