@@ -1,11 +1,11 @@
 
 import random as rand
 import datetime
-import data_utils
+import data_utils, model_utils
 import get_data
 
 
-GAME_DATA, PITCHER_DATA, BULLPEN_DATA = data_utils.get_data_dicts()
+GAME_DATA, PITCHER_DATA, BULLPEN_DATA = data_utils.get_data_dicts(2010, 2021)
 YEARS = list(GAME_DATA.keys())
 
 
@@ -31,6 +31,15 @@ def test_num_games():
             assert(len(GAME_DATA[year][team]) > 155)
 
 
+def test_rounding():
+    """
+    Make sure the round_nearest_half() function works.
+    """
+    assert(model_utils.round_nearest_half(4.6) == 4.5)
+    assert(model_utils.round_nearest_half(4.76) == 5)
+    assert(model_utils.round_nearest_half(3.1) == 3)
+    assert(model_utils.round_nearest_half(3.5) == 3.5)
+
 
 # =========================== GAME TESTS =========================== #
 
@@ -41,12 +50,12 @@ def test_game_keys():
     """
     extra_stats = ['pregame_BA', 'pregame_OBP', 'pregame_SLG', 'pregame_OPS',  '10-day_BA', '10-day_OBP', '10-day_SLG', '10-day-OPS']
     for year in GAME_DATA:
-        data = GAME_DATA[year]
-        for team in data:
-            dates = list(data[team])
+        season_data = GAME_DATA[year]
+        for team in season_data:
+            dates = list(season_data[team])
             for i in range(len(dates)):
                 date = dates[i]
-                keys = list(data[team][date])
+                keys = list(season_data[team][date])
                 for cat in get_data.HITTING_STATS:
                     assert(cat in keys)
                 if i > 0:
