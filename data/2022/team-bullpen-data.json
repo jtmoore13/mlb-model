@@ -365,6 +365,38 @@
             "game_BB": 3.0,
             "pregame_ERA": 4.42,
             "pregame_WHIP": 1.39
+        },
+        "2022-05-27": {
+            "game_H": 1.0,
+            "game_IP": 3.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.7,
+            "pregame_WHIP": 1.44
+        },
+        "2022-05-28": {
+            "game_H": 3.0,
+            "game_IP": 4.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.62,
+            "pregame_WHIP": 1.43
+        },
+        "2022-05-29": {
+            "game_H": 0.0,
+            "game_IP": 3.2,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 4.52,
+            "pregame_WHIP": 1.42
+        },
+        "2022-05-30": {
+            "game_H": 1.0,
+            "game_IP": 3.1,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 4.44,
+            "pregame_WHIP": 1.39
         }
     },
     "ATL": {
@@ -725,6 +757,38 @@
             "game_BB": 0.0,
             "pregame_ERA": 3.28,
             "pregame_WHIP": 1.21
+        },
+        "2022-05-27": {
+            "game_H": 1.0,
+            "game_IP": 3.1,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.29,
+            "pregame_WHIP": 1.21
+        },
+        "2022-05-28": {
+            "game_H": 5.0,
+            "game_IP": 4.0,
+            "game_ER": 3.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.22,
+            "pregame_WHIP": 1.19
+        },
+        "2022-05-29": {
+            "game_H": 1.0,
+            "game_IP": 3.0,
+            "game_ER": 2.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.3,
+            "pregame_WHIP": 1.2
+        },
+        "2022-05-30": {
+            "game_H": 3.0,
+            "game_IP": 3.2,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.35,
+            "pregame_WHIP": 1.2
         }
     },
     "BAL": {
@@ -1085,6 +1149,46 @@
             "game_BB": 0.0,
             "pregame_ERA": 3.11,
             "pregame_WHIP": 1.23
+        },
+        "2022-05-27": {
+            "game_H": 8.0,
+            "game_IP": 7.1,
+            "game_ER": 2.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.06,
+            "pregame_WHIP": 1.21
+        },
+        "2022-05-28": {
+            "game_H": 4.0,
+            "game_IP": 3.2,
+            "game_ER": 2.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.04,
+            "pregame_WHIP": 1.22
+        },
+        "2022-05-28 (2)": {
+            "game_H": 5.0,
+            "game_IP": 5.1,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.07,
+            "pregame_WHIP": 1.23
+        },
+        "2022-05-29": {
+            "game_H": 7.0,
+            "game_IP": 4.0,
+            "game_ER": 6.0,
+            "game_BB": 4.0,
+            "pregame_ERA": 3.0,
+            "pregame_WHIP": 1.22
+        },
+        "2022-05-30": {
+            "game_H": 2.0,
+            "game_IP": 3.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.19,
+            "pregame_WHIP": 1.25
         }
     },
     "BOS": {
@@ -1437,6 +1541,46 @@
             "game_BB": 5.0,
             "pregame_ERA": 3.71,
             "pregame_WHIP": 1.17
+        },
+        "2022-05-27": {
+            "game_H": 10.0,
+            "game_IP": 3.0,
+            "game_ER": 9.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.72,
+            "pregame_WHIP": 1.18
+        },
+        "2022-05-28": {
+            "game_H": 0.0,
+            "game_IP": 0.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 4.09,
+            "pregame_WHIP": 1.23
+        },
+        "2022-05-28 (2)": {
+            "game_H": 1.0,
+            "game_IP": 6.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.09,
+            "pregame_WHIP": 1.23
+        },
+        "2022-05-29": {
+            "game_H": 2.0,
+            "game_IP": 3.0,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.96,
+            "pregame_WHIP": 1.2
+        },
+        "2022-05-30": {
+            "game_H": 7.0,
+            "game_IP": 5.0,
+            "game_ER": 4.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.95,
+            "pregame_WHIP": 1.2
         }
     },
     "CHC": {
@@ -1789,6 +1933,38 @@
             "game_BB": 5.0,
             "pregame_ERA": 3.22,
             "pregame_WHIP": 1.19
+        },
+        "2022-05-28": {
+            "game_H": 2.0,
+            "game_IP": 4.0,
+            "game_ER": 0.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.75,
+            "pregame_WHIP": 1.25
+        },
+        "2022-05-29": {
+            "game_H": 7.0,
+            "game_IP": 4.1,
+            "game_ER": 2.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.67,
+            "pregame_WHIP": 1.25
+        },
+        "2022-05-30": {
+            "game_H": 2.0,
+            "game_IP": 3.0,
+            "game_ER": 3.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.68,
+            "pregame_WHIP": 1.26
+        },
+        "2022-05-30 (2)": {
+            "game_H": 3.0,
+            "game_IP": 6.0,
+            "game_ER": 3.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.76,
+            "pregame_WHIP": 1.25
         }
     },
     "CHW": {
@@ -2141,6 +2317,22 @@
             "game_BB": 3.0,
             "pregame_ERA": 4.1,
             "pregame_WHIP": 1.37
+        },
+        "2022-05-28": {
+            "game_H": 1.0,
+            "game_IP": 2.1,
+            "game_ER": 0.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 4.34,
+            "pregame_WHIP": 1.4
+        },
+        "2022-05-29": {
+            "game_H": 3.0,
+            "game_IP": 5.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.28,
+            "pregame_WHIP": 1.4
         }
     },
     "CIN": {
@@ -2429,6 +2621,22 @@
             "game_BB": 0.0,
             "pregame_ERA": 4.06,
             "pregame_WHIP": 1.34
+        },
+        "2022-05-27": {
+            "game_H": 2.0,
+            "game_IP": 2.2,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.95,
+            "pregame_WHIP": 1.31
+        },
+        "2022-05-29": {
+            "game_H": 5.0,
+            "game_IP": 2.1,
+            "game_ER": 6.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.94,
+            "pregame_WHIP": 1.31
         }
     },
     "CLE": {
@@ -2757,6 +2965,30 @@
             "game_BB": 0.0,
             "pregame_ERA": 3.32,
             "pregame_WHIP": 1.07
+        },
+        "2022-05-28": {
+            "game_H": 2.0,
+            "game_IP": 1.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.27,
+            "pregame_WHIP": 1.05
+        },
+        "2022-05-29": {
+            "game_H": 0.0,
+            "game_IP": 0.1,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.24,
+            "pregame_WHIP": 1.06
+        },
+        "2022-05-30": {
+            "game_H": 4.0,
+            "game_IP": 3.0,
+            "game_ER": 2.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.24,
+            "pregame_WHIP": 1.06
         }
     },
     "COL": {
@@ -3108,6 +3340,38 @@
             "game_ER": 2.0,
             "game_BB": 2.0,
             "pregame_ERA": 5.09,
+            "pregame_WHIP": 1.45
+        },
+        "2022-05-28": {
+            "game_H": 7.0,
+            "game_IP": 6.2,
+            "game_ER": 5.0,
+            "game_BB": 4.0,
+            "pregame_ERA": 5.14,
+            "pregame_WHIP": 1.47
+        },
+        "2022-05-28 (2)": {
+            "game_H": 1.0,
+            "game_IP": 2.2,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 5.2,
+            "pregame_WHIP": 1.47
+        },
+        "2022-05-29": {
+            "game_H": 2.0,
+            "game_IP": 2.1,
+            "game_ER": 1.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 5.12,
+            "pregame_WHIP": 1.46
+        },
+        "2022-05-30": {
+            "game_H": 1.0,
+            "game_IP": 2.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 5.1,
             "pregame_WHIP": 1.45
         }
     },
@@ -3461,6 +3725,30 @@
             "game_BB": 0.0,
             "pregame_ERA": 2.87,
             "pregame_WHIP": 1.08
+        },
+        "2022-05-28": {
+            "game_H": 6.0,
+            "game_IP": 3.0,
+            "game_ER": 6.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 2.84,
+            "pregame_WHIP": 1.08
+        },
+        "2022-05-29": {
+            "game_H": 5.0,
+            "game_IP": 5.0,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.1,
+            "pregame_WHIP": 1.11
+        },
+        "2022-05-30": {
+            "game_H": 4.0,
+            "game_IP": 3.1,
+            "game_ER": 1.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.06,
+            "pregame_WHIP": 1.11
         }
     },
     "HOU": {
@@ -3813,6 +4101,38 @@
             "game_BB": 2.0,
             "pregame_ERA": 2.66,
             "pregame_WHIP": 1.11
+        },
+        "2022-05-27": {
+            "game_H": 0.0,
+            "game_IP": 2.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 2.66,
+            "pregame_WHIP": 1.1
+        },
+        "2022-05-28": {
+            "game_H": 1.0,
+            "game_IP": 3.1,
+            "game_ER": 0.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 2.63,
+            "pregame_WHIP": 1.09
+        },
+        "2022-05-29": {
+            "game_H": 1.0,
+            "game_IP": 3.0,
+            "game_ER": 0.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 2.57,
+            "pregame_WHIP": 1.09
+        },
+        "2022-05-30": {
+            "game_H": 0.0,
+            "game_IP": 0.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 2.52,
+            "pregame_WHIP": 1.09
         }
     },
     "KCR": {
@@ -4149,6 +4469,38 @@
             "game_BB": 0.0,
             "pregame_ERA": 4.81,
             "pregame_WHIP": 1.45
+        },
+        "2022-05-27": {
+            "game_H": 4.0,
+            "game_IP": 4.0,
+            "game_ER": 4.0,
+            "game_BB": 4.0,
+            "pregame_ERA": 4.71,
+            "pregame_WHIP": 1.45
+        },
+        "2022-05-28": {
+            "game_H": 5.0,
+            "game_IP": 3.1,
+            "game_ER": 0.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 4.81,
+            "pregame_WHIP": 1.46
+        },
+        "2022-05-29": {
+            "game_H": 5.0,
+            "game_IP": 4.0,
+            "game_ER": 2.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.72,
+            "pregame_WHIP": 1.48
+        },
+        "2022-05-30": {
+            "game_H": 2.0,
+            "game_IP": 2.0,
+            "game_ER": 3.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 4.71,
+            "pregame_WHIP": 1.48
         }
     },
     "LAA": {
@@ -4517,6 +4869,30 @@
             "game_BB": 2.0,
             "pregame_ERA": 3.86,
             "pregame_WHIP": 1.12
+        },
+        "2022-05-27": {
+            "game_H": 5.0,
+            "game_IP": 4.2,
+            "game_ER": 1.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.84,
+            "pregame_WHIP": 1.12
+        },
+        "2022-05-28": {
+            "game_H": 5.0,
+            "game_IP": 2.1,
+            "game_ER": 3.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.79,
+            "pregame_WHIP": 1.12
+        },
+        "2022-05-29": {
+            "game_H": 8.0,
+            "game_IP": 6.0,
+            "game_ER": 5.0,
+            "game_BB": 5.0,
+            "pregame_ERA": 3.89,
+            "pregame_WHIP": 1.15
         }
     },
     "LAD": {
@@ -4869,6 +5245,38 @@
             "game_BB": 0.0,
             "pregame_ERA": 3.08,
             "pregame_WHIP": 1.09
+        },
+        "2022-05-27": {
+            "game_H": 6.0,
+            "game_IP": 4.2,
+            "game_ER": 3.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.04,
+            "pregame_WHIP": 1.09
+        },
+        "2022-05-28": {
+            "game_H": 1.0,
+            "game_IP": 3.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.12,
+            "pregame_WHIP": 1.1
+        },
+        "2022-05-29": {
+            "game_H": 3.0,
+            "game_IP": 3.0,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.07,
+            "pregame_WHIP": 1.09
+        },
+        "2022-05-30": {
+            "game_H": 2.0,
+            "game_IP": 3.0,
+            "game_ER": 1.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.06,
+            "pregame_WHIP": 1.1
         }
     },
     "MIA": {
@@ -5205,6 +5613,38 @@
             "game_BB": 1.0,
             "pregame_ERA": 3.21,
             "pregame_WHIP": 1.28
+        },
+        "2022-05-27": {
+            "game_H": 2.0,
+            "game_IP": 3.0,
+            "game_ER": 3.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.1,
+            "pregame_WHIP": 1.26
+        },
+        "2022-05-28": {
+            "game_H": 1.0,
+            "game_IP": 1.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.22,
+            "pregame_WHIP": 1.26
+        },
+        "2022-05-29": {
+            "game_H": 4.0,
+            "game_IP": 4.0,
+            "game_ER": 2.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.19,
+            "pregame_WHIP": 1.27
+        },
+        "2022-05-30": {
+            "game_H": 7.0,
+            "game_IP": 2.0,
+            "game_ER": 7.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.23,
+            "pregame_WHIP": 1.26
         }
     },
     "MIL": {
@@ -5565,6 +6005,46 @@
             "game_BB": 2.0,
             "pregame_ERA": 3.41,
             "pregame_WHIP": 1.26
+        },
+        "2022-05-27": {
+            "game_H": 3.0,
+            "game_IP": 4.0,
+            "game_ER": 2.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.38,
+            "pregame_WHIP": 1.26
+        },
+        "2022-05-28": {
+            "game_H": 3.0,
+            "game_IP": 4.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.41,
+            "pregame_WHIP": 1.25
+        },
+        "2022-05-29": {
+            "game_H": 2.0,
+            "game_IP": 2.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.33,
+            "pregame_WHIP": 1.24
+        },
+        "2022-05-30": {
+            "game_H": 8.0,
+            "game_IP": 6.1,
+            "game_ER": 4.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.29,
+            "pregame_WHIP": 1.24
+        },
+        "2022-05-30 (2)": {
+            "game_H": 1.0,
+            "game_IP": 3.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.38,
+            "pregame_WHIP": 1.24
         }
     },
     "MIN": {
@@ -5917,6 +6397,38 @@
             "game_BB": 2.0,
             "pregame_ERA": 3.4,
             "pregame_WHIP": 1.21
+        },
+        "2022-05-27": {
+            "game_H": 8.0,
+            "game_IP": 6.0,
+            "game_ER": 4.0,
+            "game_BB": 7.0,
+            "pregame_ERA": 3.51,
+            "pregame_WHIP": 1.23
+        },
+        "2022-05-28": {
+            "game_H": 4.0,
+            "game_IP": 5.0,
+            "game_ER": 2.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.59,
+            "pregame_WHIP": 1.27
+        },
+        "2022-05-29": {
+            "game_H": 5.0,
+            "game_IP": 3.0,
+            "game_ER": 2.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.59,
+            "pregame_WHIP": 1.27
+        },
+        "2022-05-30": {
+            "game_H": 4.0,
+            "game_IP": 2.0,
+            "game_ER": 1.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.63,
+            "pregame_WHIP": 1.28
         }
     },
     "NYM": {
@@ -6285,6 +6797,38 @@
             "game_BB": 2.0,
             "pregame_ERA": 3.81,
             "pregame_WHIP": 1.26
+        },
+        "2022-05-27": {
+            "game_H": 3.0,
+            "game_IP": 3.1,
+            "game_ER": 1.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.65,
+            "pregame_WHIP": 1.23
+        },
+        "2022-05-28": {
+            "game_H": 1.0,
+            "game_IP": 4.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.63,
+            "pregame_WHIP": 1.23
+        },
+        "2022-05-29": {
+            "game_H": 3.0,
+            "game_IP": 4.0,
+            "game_ER": 3.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.55,
+            "pregame_WHIP": 1.21
+        },
+        "2022-05-30": {
+            "game_H": 4.0,
+            "game_IP": 4.1,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.62,
+            "pregame_WHIP": 1.22
         }
     },
     "NYY": {
@@ -6645,6 +7189,30 @@
             "game_BB": 0.0,
             "pregame_ERA": 3.09,
             "pregame_WHIP": 1.16
+        },
+        "2022-05-27": {
+            "game_H": 0.0,
+            "game_IP": 1.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.13,
+            "pregame_WHIP": 1.17
+        },
+        "2022-05-28": {
+            "game_H": 5.0,
+            "game_IP": 2.0,
+            "game_ER": 2.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.11,
+            "pregame_WHIP": 1.16
+        },
+        "2022-05-29": {
+            "game_H": 0.0,
+            "game_IP": 1.2,
+            "game_ER": 0.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.18,
+            "pregame_WHIP": 1.18
         }
     },
     "OAK": {
@@ -7021,6 +7589,38 @@
             "game_BB": 0.0,
             "pregame_ERA": 3.35,
             "pregame_WHIP": 1.31
+        },
+        "2022-05-27": {
+            "game_H": 7.0,
+            "game_IP": 2.2,
+            "game_ER": 5.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.47,
+            "pregame_WHIP": 1.31
+        },
+        "2022-05-28": {
+            "game_H": 11.0,
+            "game_IP": 6.2,
+            "game_ER": 7.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.67,
+            "pregame_WHIP": 1.33
+        },
+        "2022-05-29": {
+            "game_H": 1.0,
+            "game_IP": 4.2,
+            "game_ER": 1.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.89,
+            "pregame_WHIP": 1.36
+        },
+        "2022-05-30": {
+            "game_H": 1.0,
+            "game_IP": 2.1,
+            "game_ER": 1.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.84,
+            "pregame_WHIP": 1.35
         }
     },
     "PHI": {
@@ -7381,6 +7981,38 @@
             "game_BB": 1.0,
             "pregame_ERA": 4.17,
             "pregame_WHIP": 1.48
+        },
+        "2022-05-27": {
+            "game_H": 5.0,
+            "game_IP": 5.0,
+            "game_ER": 3.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 4.15,
+            "pregame_WHIP": 1.48
+        },
+        "2022-05-28": {
+            "game_H": 2.0,
+            "game_IP": 2.0,
+            "game_ER": 1.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 4.19,
+            "pregame_WHIP": 1.48
+        },
+        "2022-05-29": {
+            "game_H": 3.0,
+            "game_IP": 3.1,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.2,
+            "pregame_WHIP": 1.48
+        },
+        "2022-05-30": {
+            "game_H": 3.0,
+            "game_IP": 4.0,
+            "game_ER": 2.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.17,
+            "pregame_WHIP": 1.48
         }
     },
     "PIT": {
@@ -7725,6 +8357,38 @@
             "game_BB": 3.0,
             "pregame_ERA": 4.34,
             "pregame_WHIP": 1.32
+        },
+        "2022-05-27": {
+            "game_H": 3.0,
+            "game_IP": 2.2,
+            "game_ER": 1.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 4.25,
+            "pregame_WHIP": 1.32
+        },
+        "2022-05-28": {
+            "game_H": 4.0,
+            "game_IP": 4.0,
+            "game_ER": 1.0,
+            "game_BB": 5.0,
+            "pregame_ERA": 4.24,
+            "pregame_WHIP": 1.33
+        },
+        "2022-05-29": {
+            "game_H": 3.0,
+            "game_IP": 4.0,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.2,
+            "pregame_WHIP": 1.35
+        },
+        "2022-05-30": {
+            "game_H": 6.0,
+            "game_IP": 3.1,
+            "game_ER": 3.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 4.16,
+            "pregame_WHIP": 1.34
         }
     },
     "SDP": {
@@ -8061,6 +8725,38 @@
             "game_BB": 2.0,
             "pregame_ERA": 3.53,
             "pregame_WHIP": 1.11
+        },
+        "2022-05-27": {
+            "game_H": 0.0,
+            "game_IP": 2.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.47,
+            "pregame_WHIP": 1.11
+        },
+        "2022-05-28": {
+            "game_H": 2.0,
+            "game_IP": 3.0,
+            "game_ER": 3.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.42,
+            "pregame_WHIP": 1.1
+        },
+        "2022-05-29": {
+            "game_H": 3.0,
+            "game_IP": 3.0,
+            "game_ER": 2.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.54,
+            "pregame_WHIP": 1.1
+        },
+        "2022-05-30": {
+            "game_H": 3.0,
+            "game_IP": 2.0,
+            "game_ER": 3.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.59,
+            "pregame_WHIP": 1.1
         }
     },
     "SEA": {
@@ -8421,6 +9117,30 @@
             "game_BB": 1.0,
             "pregame_ERA": 4.37,
             "pregame_WHIP": 1.27
+        },
+        "2022-05-27": {
+            "game_H": 2.0,
+            "game_IP": 2.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 4.34,
+            "pregame_WHIP": 1.27
+        },
+        "2022-05-28": {
+            "game_H": 1.0,
+            "game_IP": 2.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.29,
+            "pregame_WHIP": 1.26
+        },
+        "2022-05-29": {
+            "game_H": 1.0,
+            "game_IP": 1.2,
+            "game_ER": 0.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 4.23,
+            "pregame_WHIP": 1.26
         }
     },
     "SFG": {
@@ -8764,6 +9484,38 @@
             "game_ER": 1.0,
             "game_BB": 3.0,
             "pregame_ERA": 4.57,
+            "pregame_WHIP": 1.37
+        },
+        "2022-05-27": {
+            "game_H": 2.0,
+            "game_IP": 2.2,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.54,
+            "pregame_WHIP": 1.38
+        },
+        "2022-05-28": {
+            "game_H": 1.0,
+            "game_IP": 2.1,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 4.53,
+            "pregame_WHIP": 1.37
+        },
+        "2022-05-29": {
+            "game_H": 4.0,
+            "game_IP": 3.0,
+            "game_ER": 2.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 4.47,
+            "pregame_WHIP": 1.36
+        },
+        "2022-05-30": {
+            "game_H": 1.0,
+            "game_IP": 2.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 4.49,
             "pregame_WHIP": 1.37
         }
     },
@@ -9109,6 +9861,38 @@
             "game_BB": 0.0,
             "pregame_ERA": 3.65,
             "pregame_WHIP": 1.27
+        },
+        "2022-05-27": {
+            "game_H": 3.0,
+            "game_IP": 4.1,
+            "game_ER": 2.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.56,
+            "pregame_WHIP": 1.25
+        },
+        "2022-05-28": {
+            "game_H": 4.0,
+            "game_IP": 4.0,
+            "game_ER": 3.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.57,
+            "pregame_WHIP": 1.24
+        },
+        "2022-05-29": {
+            "game_H": 4.0,
+            "game_IP": 3.1,
+            "game_ER": 2.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.65,
+            "pregame_WHIP": 1.23
+        },
+        "2022-05-30": {
+            "game_H": 9.0,
+            "game_IP": 6.2,
+            "game_ER": 2.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 3.68,
+            "pregame_WHIP": 1.24
         }
     },
     "TBR": {
@@ -9461,6 +10245,38 @@
             "game_BB": 4.0,
             "pregame_ERA": 3.28,
             "pregame_WHIP": 1.1
+        },
+        "2022-05-27": {
+            "game_H": 1.0,
+            "game_IP": 3.0,
+            "game_ER": 0.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.35,
+            "pregame_WHIP": 1.12
+        },
+        "2022-05-28": {
+            "game_H": 1.0,
+            "game_IP": 3.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.3,
+            "pregame_WHIP": 1.11
+        },
+        "2022-05-29": {
+            "game_H": 2.0,
+            "game_IP": 3.0,
+            "game_ER": 1.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.25,
+            "pregame_WHIP": 1.1
+        },
+        "2022-05-30": {
+            "game_H": 8.0,
+            "game_IP": 5.0,
+            "game_ER": 4.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.25,
+            "pregame_WHIP": 1.1
         }
     },
     "TEX": {
@@ -9805,6 +10621,38 @@
             "game_BB": 1.0,
             "pregame_ERA": 3.63,
             "pregame_WHIP": 1.26
+        },
+        "2022-05-27": {
+            "game_H": 0.0,
+            "game_IP": 3.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.59,
+            "pregame_WHIP": 1.25
+        },
+        "2022-05-28": {
+            "game_H": 2.0,
+            "game_IP": 3.0,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.53,
+            "pregame_WHIP": 1.23
+        },
+        "2022-05-29": {
+            "game_H": 7.0,
+            "game_IP": 4.1,
+            "game_ER": 2.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.52,
+            "pregame_WHIP": 1.23
+        },
+        "2022-05-30": {
+            "game_H": 6.0,
+            "game_IP": 3.0,
+            "game_ER": 3.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.53,
+            "pregame_WHIP": 1.25
         }
     },
     "TOR": {
@@ -10157,6 +11005,30 @@
             "game_BB": 0.0,
             "pregame_ERA": 3.82,
             "pregame_WHIP": 1.22
+        },
+        "2022-05-27": {
+            "game_H": 0.0,
+            "game_IP": 3.0,
+            "game_ER": 0.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.72,
+            "pregame_WHIP": 1.21
+        },
+        "2022-05-28": {
+            "game_H": 4.0,
+            "game_IP": 4.0,
+            "game_ER": 3.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.65,
+            "pregame_WHIP": 1.19
+        },
+        "2022-05-29": {
+            "game_H": 6.0,
+            "game_IP": 6.2,
+            "game_ER": 4.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 3.73,
+            "pregame_WHIP": 1.2
         }
     },
     "WSN": {
@@ -10525,6 +11397,38 @@
             "game_BB": 0.0,
             "pregame_ERA": 4.11,
             "pregame_WHIP": 1.38
+        },
+        "2022-05-28": {
+            "game_H": 4.0,
+            "game_IP": 5.1,
+            "game_ER": 0.0,
+            "game_BB": 2.0,
+            "pregame_ERA": 4.05,
+            "pregame_WHIP": 1.37
+        },
+        "2022-05-28 (2)": {
+            "game_H": 4.0,
+            "game_IP": 3.0,
+            "game_ER": 1.0,
+            "game_BB": 1.0,
+            "pregame_ERA": 3.93,
+            "pregame_WHIP": 1.36
+        },
+        "2022-05-29": {
+            "game_H": 7.0,
+            "game_IP": 4.0,
+            "game_ER": 4.0,
+            "game_BB": 0.0,
+            "pregame_ERA": 3.92,
+            "pregame_WHIP": 1.37
+        },
+        "2022-05-30": {
+            "game_H": 8.0,
+            "game_IP": 6.2,
+            "game_ER": 7.0,
+            "game_BB": 3.0,
+            "pregame_ERA": 4.03,
+            "pregame_WHIP": 1.37
         }
     }
 }
