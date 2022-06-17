@@ -1,5 +1,6 @@
 
 from sportsipy.mlb.teams import Teams
+from sportsipy.mlb.roster import Roster, Player
 import sys
 import datetime
 import json
@@ -7,16 +8,12 @@ import re
 import math
 from colorama import Fore, Style
 
-import get_data
-
-
 CHECK = u'\u2713'
 GREEN_CHECK = Fore.GREEN+CHECK+Style.RESET_ALL
 DONE = Style.BRIGHT+'Done '+GREEN_CHECK+Style.RESET_ALL
 LINE_UP = '\033[1A'
 LINE_CLEAR = '\x1b[2K'
 BACKSPACE = '\b'
-
 
 STAT_CHANGES = {
     'date': 'date_game',
@@ -139,6 +136,40 @@ STADIUM_SCORES = {
 }
 
 
+HAS_DH = {
+    'ARI': 0,
+    'ATL': 0,
+    'BAL': 1, 
+    'BOS': 1, 
+    'CHW': 1, 
+    'CHC': 0, 
+    'CIN': 0, 
+    'CLE': 1,
+    'COL': 0, 
+    'DET': 1, 
+    'HOU': 1, 
+    'KCR': 1,
+    'LAA': 1,
+    'LAD': 0, 
+    'MIA': 0, 
+    'FLA': 0,
+    'MIL': 0, 
+    'MIN': 1, 
+    'NYM': 0, 
+    'NYY': 1, 
+    'OAK': 1, 
+    'PHI': 0, 
+    'PIT': 0, 
+    'SDP': 0, 
+    'SFG': 0, 
+    'SEA': 1, 
+    'STL': 0, 
+    'TBR': 1,
+    'TBD': 1,
+    'TEX': 1, 
+    'TOR': 1, 
+    'WSN': 0,
+}
 
 MONTHS = {
     'Mar': 3, 
@@ -429,19 +460,104 @@ def print_same_line(message):
     print(LINE_UP, end=LINE_CLEAR)
 
 
-def get_data_dicts():
+def get_stadium_score(team, game):
+    """
+    """
+    if game['home']:
+        return STADIUM_SCORES[team]
+    return STADIUM_SCORES[game['opp']]
+
+
+def get_pitcher_ERA(pitcher_data, year, id, date):
+    """
+    Return a pitcher's pregame ERA.
+    """
+    return pitcher_data[year][id][date]['pregame_ERA']
+
+
+def get_pitcher_WHIP(pitcher_data, year, id, date):
+    """
+    Return a pitcher's pregame WHIP.
+    """
+    return pitcher_data[year][id][date]['pregame_WHIP']
+
+
+def get_bullpen_ERA(bullpen_data, year, team_abbr, date):
+    """
+    Return a team's bullpen pregame ERA.
+    """
+    return bullpen_data[year][team_abbr][date]['pregame_ERA']
+
+
+def get_bullpen_WHIP(bullpen_data, year, team_abbr, date):
+    """
+    Return a team's bullpen pregame WHIP.
+    """
+    return bullpen_data[year][team_abbr][date]['pregame_WHIP']
+
+
+def get_data_dicts(start_year, end_year):
     """
     Load the data for each year into separate dictionaries and return 
     them. 
     """
-    print('Loading data from files...')
     game_data = {}
     pitcher_data = {}
     bullpen_data = {}
-    years = [str(year) for year in range(get_data.START_YEAR, get_data.END_YEAR+1) if year != 2020]
+    years = [str(year) for year in range(start_year, end_year+1) if year != 2020]
     for year in years:  
-        game_data[year] = load_data(year, get_data.GAME_DATA)
-        pitcher_data[year] = load_data(year, get_data.PITCHER_DATA)
-        bullpen_data[year] = load_data(year, get_data.BULLPEN_DATA)
+        game_data[year] = load_data(year, 'game-data.json')
+        pitcher_data[year] = load_data(year, 'pitcher-data.json')
+        bullpen_data[year] = load_data(year, 'team-bullpen-data.json')
 
     return game_data, pitcher_data, bullpen_data
+
+
+def has_DH(team, year):
+    """
+    Return true if the team is in the American league/has a DH.
+    """
+    if int(year) >= 2022:  # universal DH
+        return True
+    return HAS_DH[team]
+
+
+def get_pitcher_ID(team_abbr, name):
+    """
+    Return the ID of the player given his first initial, last name, 
+    and team.
+
+    Example of name format: 'j.verlander'
+    """
+
+    first_initial, last_name = name.split('.')
+    id_name = last_name[:min(5, len(last_name))]
+    roster = [player.player_id for player in Roster(team_abbr).players]
+    player_id = []
+    for id in roster:
+        if id_name + first_initial in id:
+            player_id.append(id)
+
+    if len(player_id) == 0:
+        print(f'Player not found ({first_initial}. {last_name})')
+        return
+    elif len(player_id) > 1:
+        print(f'Multiple pitchers found: {player_id}')
+        return
+    return player_id[0]
+
+
+def get_weekdays(date):
+    """
+    Return a list of weekdays filled with zeros, except a 1 in the 
+    column of the weekday the date falls on. 0-index is Monday.
+    """
+    values = []
+    date_str = date if '(' not in date else date[:date.find('(')].strip()
+    for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']:
+        weekday = datetime.date.fromisoformat(date_str).strftime('%A')
+        if day == weekday:
+            values.append(1)
+        else:
+            values.append(0)
+    return values

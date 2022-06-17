@@ -9,19 +9,20 @@ import xgboost as xgb
 import seaborn as sb
 from colorama import Fore, Style
 import pickle
-import json
-import datetime
 import sys
-import random
+import datetime
 import data_utils, model_utils
 
 
+MODEL_FILE = 'my_model.sav'
 START_YEAR = 2010
 END_YEAR = 2022
 GAME_DATA, PITCHER_DATA, BULLPEN_DATA = data_utils.get_data_dicts(START_YEAR, END_YEAR)
-MODEL_FILE = 'my_model.sav'
-
+RUN_MAX = 9
 FEATURE_LIST = [
+    'temp',
+    'has_DH',
+    'stadium_score',
     'pregame_BA',
     'pregame_SLG',
     'recent_BA',
@@ -34,19 +35,31 @@ FEATURE_LIST = [
     'opp_starter_WHIP',
     'opp_bullpen_ERA',
     'opp_bullpen_WHIP',
-    'stadium_score',
-    'temp',
-    'over_under',
-    'has_DH',
+    'open_over_under',
+    'Monday', 
+    'Tuesday',
+    'Wednesday', 
+    'Thursday', 
+    'Friday', 
+    'Saturday', 
+    'Sunday'
 ]
 
 def make_game_sample(game, year, team, date):
     """
+    Create and return an array of feature values. Values are added
+    in the same order as listed in the FEATURE_LIST list. 
+
+    When for_prediction is True, the opposing pitcher's stats are not 
+    added, because the pitcher IDs are not known yet.
     """
-    sample = []             
     throw = 'right' if game['opp_starter_righty'] else 'left'
     loc = 'home' if game['home'] else 'away'
     home_team = team if game['home'] else game['opp']
+    sample = []             
+    sample.append(game['temp'])
+    sample.append(data_utils.has_DH(home_team, year))
+    sample.append(data_utils.get_stadium_score(team, game))
     sample.append(game['pregame_BA'])
     sample.append(game['pregame_SLG'])
     sample.append(game['10-day_BA'])
@@ -59,10 +72,8 @@ def make_game_sample(game, year, team, date):
     sample.append(data_utils.get_pitcher_WHIP(PITCHER_DATA, year, game['opp_starter_id'], date))
     sample.append(data_utils.get_bullpen_ERA(BULLPEN_DATA, year, game['opp'], date))
     sample.append(data_utils.get_bullpen_WHIP(BULLPEN_DATA, year, game['opp'], date))
-    sample.append(data_utils.get_stadium_score(team, game))
-    sample.append(game['temp'])
-    sample.append(game['over_under'])
-    sample.append(data_utils.has_DH(home_team, year))
+    sample.append(game['open_over_under'])
+    sample.extend(data_utils.get_weekdays(date))
     return np.array(sample)
 
 
@@ -75,7 +86,7 @@ def is_incomplete_sample(date, game):
         return True
     if 'pregame_BA' not in game:
         return True
-    if 'over_under' not in game:
+    if 'open_over_under' not in game:
         return True
     if '10-day_BA' not in game or '15-day_BA' not in game:
         return True
@@ -101,12 +112,11 @@ def is_incomplete_sample(date, game):
     return False
 
 
-def get_samples(test_years):
+def get_samples(test_years=[]):
     """
     Parse the game data and form data samples. Return 2d array of samples
     and a 1d array of targets.
     """
-    print('Gathering samples...')
     incomplete = 0
     samples = []
     targets = []
@@ -118,7 +128,7 @@ def get_samples(test_years):
         for team in GAME_DATA[year]:
             for date in list(GAME_DATA[year][team])[1:]:
                 game = GAME_DATA[year][team][date]
-                team_runs = min(game['R'], 9)
+                team_runs = min(game['R'], RUN_MAX*9)
                 if is_incomplete_sample(date, game):
                     incomplete += 1
                     continue
@@ -132,9 +142,6 @@ def get_samples(test_years):
                     test_samples.append(sample)
                     test_targets.append(team_runs)
 
-    print(f'{Style.DIM}{len(samples)} complete samples.')
-    print(f'{incomplete} incomplete samples.\n{Style.RESET_ALL}')
-
     df = pd.DataFrame(samples, columns=FEATURE_LIST)
     df['runs_scored'] = targets
     train_df = pd.DataFrame(train_samples, columns=FEATURE_LIST)
@@ -144,73 +151,95 @@ def get_samples(test_years):
     return df, train_df, test_df
 
 
-def compare_to_vegas(rf, test_years, nearest_half=True):
+def compare_to_vegas(rf, test_years=[], nearest_half=True):
     """
     """
     me_closer = 0
     vegas_closer = 0
-    total = 1
+    num_games = 0
     over_vegas = 0
     under_vegas = 0
     push_vegas = 0
     games = set()
+    profit = 0
+    games_bet = 0
     for year in test_years:
         for team in GAME_DATA[year]:
             for date in GAME_DATA[year][team]:
                 game1 = GAME_DATA[year][team][date]
-                game2 = GAME_DATA[year][game1['opp']][date]
-                home_team = team if game1['home'] else game1['opp']
-                away_team = game1['opp'] if home_team == team else team
+                opp = game1['opp']
+                game2 = GAME_DATA[year][opp][date]
+                home_team = team if game1['home'] else opp
+                away_team = opp if home_team == team else team
                 game_id = home_team + away_team + date
+                # don't predict the same game twice
                 if game_id in games:
                     continue
                 if is_incomplete_sample(date, game1) or is_incomplete_sample(date, game2):
                     continue
-
                 sample1 = make_game_sample(game1, year, team, date).reshape(1, len(FEATURE_LIST))
                 sample2 = make_game_sample(game2, year, game1['opp'], date).reshape(1, len(FEATURE_LIST))
+
                 prediction1 = float(rf.predict(sample1)[0])
                 prediction2 = float(rf.predict(sample2)[0])
 
+                prediction1 = model_utils.round_nearest_half(float(rf.predict(sample1)[0]))
+                prediction2 = model_utils.round_nearest_half(float(rf.predict(sample2)[0]))
                 my_total = round(prediction1 + prediction2, 2)
+
                 if nearest_half:
-                    my_total = round(my_total*2)/2
-                vegas_total = game1['over_under']
+                    my_total = model_utils.round_nearest_half(my_total)
+                vegas_total = game1['open_over_under']
                 actual_total = game1['R'] + game2['R']
 
-                if abs(my_total - vegas_total) >= 0:
-                    total += 1
-                    games.add(game_id)
-                    if my_total > vegas_total:
-                        over_vegas += 1
-                    elif my_total < vegas_total:
-                        under_vegas += 1
-                    else:
-                        push_vegas += 1
+                if my_total > vegas_total:
+                    over_vegas += 1
+                elif my_total < vegas_total:
+                    under_vegas += 1
+                else:
+                    push_vegas += 1
 
+                condition = True
+                condition = abs(my_total - vegas_total) >= 1
+                condition = my_total < vegas_total    
+                if condition:
+                    games_bet += 1
                     if abs(my_total - actual_total) < abs(vegas_total - actual_total):
                         me_closer += 1
+                        profit += 10
                     elif abs(my_total - actual_total) > abs(vegas_total - actual_total):
                         vegas_closer += 1
+                        profit -= 11
+
+                num_games += 1
+                games.add(game_id)
 
                 # print(f'{team} vs {game1["opp"]} {date}')
                 # print(f'My total:     {my_total}')
                 # print(f'Vegas total:  {vegas_total}')
-                # print(f'Actual score: {actual_total}\n')
+                # print(f'Actual score: {actual_total}', end='\n\n')
 
-    print(f'over vegas: {round(over_vegas*100/total)}%, under vegas: {round(under_vegas*100/total)}%, same: {round(push_vegas*100/total)}%')
-    print('---------------------------')
-    print(f'Model success {test_years[0]}: {round(me_closer*100/(total-push_vegas), 2)}%')
-    print('---------------------------')
+    success_rate = round(me_closer*100/(me_closer+vegas_closer), 2)
+    success_color = Fore.GREEN if success_rate >= 50 else Fore.RED
+    profit_color = Fore.GREEN if profit > 0 else Fore.RED
+    years_display = test_years[0] if len(test_years) == 1 else test_years
+    print('----------------------------')
+    print(f'Model success {years_display}: {success_color}{success_rate}%{Style.RESET_ALL}\n')
+    print(f'Profit ($10 units): {profit_color}{model_utils.format_dollars(profit)}{Style.RESET_ALL}')
+    print(f'Games bet:   {round(games_bet*100/num_games)}% ({games_bet}/{num_games})')
+    print(f'Over Vegas:  {round(over_vegas*100/num_games)}%')
+    print(f'Under Vegas: {round(under_vegas*100/num_games)}%')
+    print(f'Same:        {round(push_vegas*100/num_games)}%')
 
 
 def develop(rf, df):
     """
-    Main function used to develop and test the model.
+    Function used to develop and test the model.
     """
     samples, targets = df.loc[:, df.columns!='runs_scored'], df['runs_scored']
     X_train, X_test, y_train, y_test = train_test_split(samples, targets)
 
+    print('Performing cross-validation...')
     cv = KFold(n_splits=3, shuffle=True, random_state=42)
     train_scores = cross_val_score(rf, X_train, y_train, scoring='neg_root_mean_squared_error', cv=cv, n_jobs=-1)
     train_rmse = round(-1*mean(train_scores), 2)
@@ -248,32 +277,80 @@ def fit_and_save(rf, df, filename):
 
 def test_each_year():
     """
+    Creates a model for each year, trains the model on all other years,
+    then reports accuracy for the given year. Essentially k-fold cross
+    validation.
     """
-    for year in [str(year) for year in range(2021, 2022) if year != 2020]:
+    for year in [str(year) for year in range(START_YEAR, END_YEAR+1) if year != 2020]:
         rf = xgb.XGBRFRegressor(n_estimators=1000, max_depth=7, gamma=0, min_child_weight=7, subsample=.6, reg_alpha=.1)
         test_years = [year]
         df, train_df, test_df = get_samples(test_years)
         X_train, y_train = train_df.loc[:, train_df.columns!='runs_scored'], train_df['runs_scored']
         rf.fit(X_train, y_train)
-        compare_to_vegas(rf, test_years, nearest_half=True)
+        compare_to_vegas(rf, test_years)
+
+
+def get_most_recent_game(team):
+    """
+    """
+    year = list(GAME_DATA)[-1]
+    last_date = list(GAME_DATA[year][team])[-1]
+    return GAME_DATA[year][team][last_date]
+
+
+def predict(team, opp, date, team1_starter, team2_starter, vegas_total):
+    """
+    """
+    year = date.split('-')[0]
+    game1 = get_most_recent_game(team)
+    game2 = get_most_recent_game(opp)
+
+    if is_incomplete_sample(game1):
+        print(f'Incomplete stats for {team}')
+        return
+    if is_incomplete_sample(game2):
+        print(f'Incomplete stats for {opp}')
+        return
+
+    sample1 = make_game_sample(game1, team, date)
+    sample2 = make_game_sample(game2, year, opp)
+    team1_starter_id = data_utils.get_pitcher_ID(team, team1_starter)
+    team2_starter_id = data_utils.get_pitcher_ID(team, team2_starter)
+    # add_pitcher_stats_to_sample(sample1, date, team2_starter_id, opp)
+    # add_pitcher_stats_to_sample(sample2, date, team1_starter_id, opp)
+    sample1.append(vegas_total)
+    sample2.append(vegas_total)
+
+    model = pickle.load(MODEL_FILE)
+    sample1 = sample1.reshape(1, len(FEATURE_LIST))
+    sample2 = sample2.reshape(1, len(FEATURE_LIST))
+    prediction1 = float(model.predict(sample1)[0])
+    prediction2 = float(model.predict(sample2)[0])
+
+    print(prediction1, prediction2)
 
 
 def main():
     """
     """
     rf = xgb.XGBRFRegressor(n_estimators=1000, max_depth=7, gamma=0, min_child_weight=7, subsample=.6, reg_alpha=.1)
-    test_years = ['2021']
-    df, train_df, test_df = get_samples(test_years)
+    df, train_df, test_df = get_samples()
 
     args = sys.argv
     if '-d' in args or '-develop' in args:
         develop(rf, df)
     elif '-f' in args or '-fit' in args:
         fit_and_save(rf, df, MODEL_FILE)
-    elif '-c' in args or '-compare' in args:
+    elif '-ty' in args or '-test-year' in args:
+        if 'all' in args:
+            test_each_year()
+            return
+        test_year = args[2]
+        print(f'\nTesting model on {test_year}...\n')
+        df, train_df, test_df = get_samples(test_years=[test_year])
         X_train, y_train = train_df.loc[:, train_df.columns!='runs_scored'], train_df['runs_scored']
         rf.fit(X_train, y_train)
-        compare_to_vegas(rf, test_years, nearest_half=True)
+        compare_to_vegas(rf, test_years=[test_year])
 
 
 if __name__ == '__main__':
